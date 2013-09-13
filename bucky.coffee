@@ -16,46 +16,70 @@ initTime = +new Date
 # We grab a reference to it now before we mutate it
 _XMLHttpRequest = window.XMLHttpRequest
 
+extend = (a, objs...) ->
+  for obj in objs.reverse()
+    for key, val of obj
+      a[key] = val
+  a
+
 exportDef = (Frosting) ->
-  # The max time we should wait between sends
-  MAX_INTERVAL = 30000
+  defaults =
+    # Where is the Bucky server hosted.  This should be both the host and the APP_ROOT (if you've
+    # defined one).  This default assumes its at the same host as your app.
+    #
+    # Keep in mind that if you use a different host, CORS will come into play.
+    host: '/bucky'
 
-  # How long we should wait from getting the last datapoint
-  # to do a send, if datapoints keep coming in eventually
-  # the MAX_INTERVAL will trigger a send.
-  AGGREGATION_INTERVAL = 5000
+    # The max time we should wait between sends
+    maxInterval: 30000
 
-  DECIMAL_PRECISION = 3
+    # How long we should wait from getting the last datapoint
+    # to do a send, if datapoints keep coming in eventually
+    # the MAX_INTERVAL will trigger a send.
+    aggregationInterval: 5000
 
-  # Bucky can automatically report a datapoint of what it's response time
-  # is.  This is useful because Bucky returns almost immediately, making
-  # it's response time a good measure of the user's connection latency.
-  SEND_LATENCY = true
+    # How many decimal digits should we include in our
+    # times?
+    decimalPrecision: 3
 
-  # Downsampling will cause Bucky to only send data 100*SAMPLE percent
-  # of the time.  It is used to reduce the amount of data sent to the backend.  Keep
-  # in mind that the goal is to have each datapoint sent at least once per minute.
-  #
-  # It's not done per datapoint, but per client, so you probably don't want to downsample
-  # on node (you would be telling a percentage of your servers to not send data).
-  SAMPLE = 1
+    # Bucky can automatically report a datapoint of what it's response time
+    # is.  This is useful because Bucky returns almost immediately, making
+    # it's response time a good measure of the user's connection latency.
+    sendLatency: false
 
+    # Downsampling will cause Bucky to only send data 100*SAMPLE percent
+    # of the time.  It is used to reduce the amount of data sent to the backend.  Keep
+    # in mind that the goal is to have each datapoint sent at least once per minute.
+    #
+    # It's not done per datapoint, but per client, so you probably don't want to downsample
+    # on node (you would be telling a percentage of your servers to not send data).
+    sample: 1
+
+    # Set to false to disable sends (in dev mode for example)
+    active: true
+   
+  options = extend {}, defaults
+    
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
     'counter': 'c'
 
-  BUCKY_HOST = '/bucky'
-
-  ACTIVE = Math.random() < SAMPLE
-
-  # Should we console.log if an ajax request is ended without us having recorded
-  # the start time (usually means requests.monitor is being called too late).
-  WARN_UNSTARTED_REQUEST = true
+  ACTIVE = options.active
+  do updateActive = ->
+    ACTIVE = options.active and Math.random() < options.sample
 
   HISTORY = {}
 
-  round = (num, precision=DECIMAL_PRECISION) ->
+  setOptions = (opts) ->
+    extend options, opts
+
+    if 'sample' of opts
+      updateActive()
+
+    options
+
+  round = (num, precision=options.decimalPrecision) ->
     num.toFixed(precision)
 
   queue = {}
@@ -99,13 +123,13 @@ exportDef = (Frosting) ->
     # points coming in.
 
     clearTimeout sendTimeout
-    sendTimeout = setTimeout flush, AGGREGATION_INTERVAL
+    sendTimeout = setTimeout flush, options.aggregationInterval
 
     unless maxTimeout?
-      maxTimeout = setTimeout flush, MAX_INTERVAL
+      maxTimeout = setTimeout flush, options.maxInterval
 
   sendQueue = ->
-    if DISABLED
+    if not ACTIVE
       console.log "Would send bucky queue"
       return
 
@@ -129,7 +153,7 @@ exportDef = (Frosting) ->
     body = JSON.stringify out
 
     request = new _XMLHttpRequest
-    request.open 'POST', "#{ BUCKY_HOST }/send", true
+    request.open 'POST', "#{ options.host }/send", true
 
     request.setRequestHeader 'Content-Type', 'application/json'
     request.setRequestHeader 'Content-Length', body.length
@@ -150,7 +174,7 @@ exportDef = (Frosting) ->
   updateLatency = (time) ->
     currentLatency = time
 
-    if SEND_LATENCY and not latencySent
+    if options.sendLatency and not latencySent
       enqueue 'bucky.latency', time, 'timer'
 
       latencySent = true
@@ -437,6 +461,7 @@ exportDef = (Frosting) ->
       requests,
       sendPerformanceData,
       flush,
+      setOptions,
       history: HISTORY,
       active: ACTIVE,
       enableAjaxMonitoring: ->
