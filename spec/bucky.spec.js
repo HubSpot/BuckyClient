@@ -1,0 +1,134 @@
+(function() {
+  hubspot.require(['hubspot.bucky.client'], function(Bucky) {
+    describe('The Bucky Object', function() {
+      it('should be defined', function() {
+        return expect(Bucky).toBeDefined();
+      });
+      it('should itself be a client', function() {
+        expect(Bucky.send).toBeDefined();
+        expect(Bucky.timer).toBeDefined();
+        expect(Bucky.count).toBeDefined();
+        return expect(Bucky.requests).toBeDefined();
+      });
+      return it('should create clients when called', function() {
+        return expect(Bucky().send).toBeDefined();
+      });
+    });
+    describe('A Bucky Client', function() {
+      var client;
+      client = null;
+      beforeEach(function() {
+        return client = Bucky('prefix');
+      });
+      return it('should have a send method', function() {
+        return expect(client.send).toBeDefined();
+      });
+    });
+    describe('getFullUrl', function() {
+      return it('should add the hostname if the url starts with slash', function() {
+        return expect(Bucky.requests.getFullUrl('/test', {
+          hostname: 'host'
+        })).toBe('host/test');
+      });
+    });
+    describe('urlToKey', function() {
+      var utk;
+      utk = Bucky.requests.urlToKey;
+      it('should convert slashes to dots', function() {
+        return expect(utk('a/b/c')).toBe('a.b.c');
+      });
+      it('should add the method', function() {
+        return expect(utk('x', 'GET')).toBe('x.get');
+      });
+      it('should strip leading and trailing slashes', function() {
+        return expect(utk('/a/b/c/')).toBe('a.b.c');
+      });
+      it('should strip get parameters', function() {
+        var res, url;
+        url = '/contacts/53/lists/ajax/list/all/detail?properties=%5B%22firstname%22%2C%22lastname%22%2C%22photo%22%2C%22twitterhandle%22%2C%22twitterprofilephoto%22%2C%22website%22%2C%22company%22%2C%22lifecyclestage%22%2C%22city%22%2C%22state%22%2C%22twitterhandle%22%2C%22phone%22%2C%22email%22%5D&offset=0&vidOffset=0&count=100&recent=true';
+        res = 'contacts.lists.ajax.list.all.detail';
+        return expect(utk(url)).toBe(res);
+      });
+      it('should strip url hashes', function() {
+        expect(utk('/test/abc#page')).toBe('test.abc');
+        return expect(utk('http://app.hubspot.com/analyze/landing-pages/#range=custom&frequency=weekly&start=03&end=06events')).toBe('app.hubspot.analyze.landing-pages');
+      });
+      it('should strip events', function() {
+        expect(utk('contacts/53/ajax/event/000000003176')).toBe('contacts.ajax.events');
+        return expect(utk('contacts/53/ajax/events/9pgMAm3nY6sh/test')).toBe('contacts.ajax.events.test');
+      });
+      it('should strip ids', function() {
+        expect(utk('test/33/test/3423421')).toBe('test.test');
+        expect(utk('a/b/432;234;232334;23;23/c')).toBe('a.b.c');
+        expect(utk('fdf/443_34223424_324')).toBe('fdf');
+        return expect(utk('/344-432/test')).toBe('test');
+      });
+      it('should strip .com and www.', function() {
+        return expect(utk('http://www.google.com/test/site')).toBe('google.test.site');
+      });
+      it('should add the passed in root', function() {
+        return expect(utk('test/as', null, 'root')).toBe('root.test.as');
+      });
+      it('should strip secure ids', function() {
+        return expect(utk('https://app.hubspot.com/contacts/53/lists/ajax/contact/_AO_T-mNtu9TBKIkc1lTfjBFOMBYFx1B4TzhLV6gYdIpsP-AUbHrAzFUQ7-M5bkRdvdYHQ5ro9LqVxmc4nzeNZ7D2V0aqoaQXCg/detail?includeHistory=true&includeEmailSubscriptions=true&includePublicUrl=true')).toBe('app.hubspot.contacts.lists.ajax.contact.detail');
+      });
+      it('should strip email addresses', function() {
+        return expect(utk('test/page/zack@comnet.org/me')).toBe('test.page.me');
+      });
+      it('should strip domain names in the path', function() {
+        return expect(utk('test/page/hubspot.com/me')).toBe('test.page.me');
+      });
+      it('should strip static versions in the path', function() {
+        return expect(utk('example.com/test/static-1.343/other')).toBe('example.test.static.other');
+      });
+      it('should strip port numbers in the host', function() {
+        return expect(utk('http://www.awesome.com:1337/test/page')).toBe('awesome.test.page');
+      });
+      it('should strip guids', function() {
+        return expect(utk('https://app.hubspot.com/content/53/cta/clone/05abcf1a-b5e3-4e48-9817-c003ad16660a')).toBe('app.hubspot.content.cta.clone');
+      });
+      it('should strip hashes', function() {
+        expect(utk('https://app.hubspot.com/analyze/53/api/pages/v3/pages/bd61568a93fc45637b8dceca1a34551b46627d26?errorsDismissed=1')).toBe('app.hubspot.analyze.api.pages.v3.pages');
+        return expect(utk('https://app.hubspot.com/analyze/53/api/pages/v3/pages/098F6BCD4621D373CADE4E832627B4F6')).toBe('app.hubspot.analyze.api.pages.v3.pages');
+      });
+      it('should decode uri entities', function() {
+        return expect(utk('test/it%20expect/it/to/work')).toBe('test.it.expect.it.to.work');
+      });
+      it('should convert colons to underscores', function() {
+        return expect(utk('test/path:with:colons/yea')).toBe('test.path_with_colons.yea');
+      });
+      return it('should strip .js extensions', function() {
+        return expect(utk('test/path/ending/in/something.js')).toBe('test.path.ending.in.something');
+      });
+    });
+    return describe('send', function() {
+      var server;
+      server = null;
+      beforeEach(function() {
+        server = sinon.fakeServer.create();
+        server.autoRespond = true;
+        return window.BUCKY_DEPLOYED = true;
+      });
+      afterEach(function() {
+        return server.restore();
+      });
+      it('should send a datapoint', function() {
+        Bucky.send('data.point', 4);
+        Bucky.flush();
+        expect(server.requests.length).toBe(1);
+        return expect(JSON.parse(server.requests[0].requestBody)['data.point']).toBe("4.000|g");
+      });
+      return it('should send timers', function() {
+        var body;
+        Bucky.send('data.1', 5, 'timer');
+        Bucky.send('data.2', 3, 'timer');
+        Bucky.flush();
+        body = JSON.parse(server.requests[0].requestBody);
+        expect(body['data.1']).toBe("5.000|ms");
+        expect(body['data.2']).toBe("3.000|ms");
+        return expect(server.requests.length).toBe(1);
+      });
+    });
+  });
+
+}).call(this);

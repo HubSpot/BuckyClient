@@ -7,7 +7,7 @@ other stats aggregator of your choice.
 ### Server
 
 You can play with Bucky just using the client, but if you'd like to start collecting data, see the
-[BuckyServer/README.md](Server Instructions)
+[http://github.com/HubSpot/BuckyServer](Server Instructions)
 
 ### Setup
 
@@ -200,6 +200,6 @@ on the server where you might be pushing out many points with the same key).
 
 ### App Server
 
-This project also includes the server used to collect these stats and push them into the stats server of your choice.
+This project pushes data to the Bucky Server.
 
-[BuckyServer/README.md](Server Documentation)
+[http://github.com/HubSpot/BuckyServer/README.md](Server Documentation)
