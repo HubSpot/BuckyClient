@@ -13,7 +13,10 @@ else
 # window.performance
 initTime = +new Date
 
-exportDef = ($, Frosting) ->
+# We grab a reference to it now before we mutate it
+_XMLHttpRequest = window.XMLHttpRequest
+
+exportDef = (Frosting) ->
   # The max time we should wait between sends
   MAX_INTERVAL = 30000
 
@@ -112,10 +115,6 @@ exportDef = ($, Frosting) ->
         console.error "Type #{ point.type } not understood by Bucky"
         continue
 
-      if point.type is 'timer' and point.value > 120000
-        # Throw out impossible times
-        continue
-
       value = point.value
       if point.type in ['gauge', 'timer']
         value = round(value)
@@ -126,18 +125,20 @@ exportDef = ($, Frosting) ->
         out[key] += "@#{ round(1 / point.count, 5) }"
 
     sendStart = now()
-    $.ajax
-      url: BUCKY_HOST + '/send'
-      type: 'POST'
-      contentType: 'application/json'
-      data: JSON.stringify out
-      _buckySend: true
-      error: (e) ->
-        console.error e, "sending data"
-      success: ->
-        sendEnd = now()
+  
+    body = JSON.stringify out
 
-        updateLatency(sendEnd - sendStart)
+    request = new _XMLHttpRequest
+    request.open 'POST', "#{ BUCKY_HOST }/send", true
+
+    request.setRequestHeader 'Content-Type', 'application/json'
+    request.setRequestHeader 'Content-Length', body.length
+
+    request.addEventListener 'load', ->
+      updateLatency(now() - sendStart)
+    , false
+
+    request.send body
 
     queue = {}
 
@@ -361,71 +362,64 @@ exportDef = ($, Frosting) ->
           url
 
       monitor: (root='requests') ->
-        lastXHR = undefined
-        jQuery(document).ajaxSend Frosting.wrap (event, jqXHR, options) ->
-          jqXHR.startTime = now()
-
-          # This is super sketchy (it relies on the below function being called
-          # synchronously after this one), but it's jQuery's fault for
-          # not giving us a reference to the xhr object.
-          lastXHR = jqXHR
-
-        jQuery.ajaxSettings.xhr = ->
-          # jQuery gives us no reference to the built-in xhr object, so
-          # we have to override how it creates the object to be able to bind our
-          # timer.
-          try
-            xhr = new XMLHttpRequest()
-          catch e
-
-          # We seperatly frost this, because it's critical that even if
-          # it fails, this function still returns the xhr object.
-          Frosting.run ->
-            xhr?.readyStateTimes =
-              0: now()
-
-            lastXHR?.realXHR = xhr
-            lastXHR = null
-            xhr?.addEventListener 'readystatechange', ->
-              xhr.readyStateTimes[xhr.readyState] = now()
-
-          return xhr
-
         self = this
-        jQuery(document).ajaxComplete Frosting.wrap (event, xhr, options) ->
-          # Skip our own sends to not continually send forever.  The request duration is
-          # independently logged as bucky.latency.
-          return if options._buckySend
-          
-          if xhr.startTime?
-            dur = now() - xhr.startTime
+        done = Frosting.wrap ({type, url, event, request, startTime}) ->
+          if startTime?
+            dur = now() - startTime
           else
-            if WARN_UNSTARTED_REQUEST
-              hlog "A request was completed which Bucky did not record having been started.  Is bucky.request.monitor being called too late?"
-
-            WARN_UNSTARTED_REQUEST = false
             return
 
-          url = options.url
           url = self.getFullUrl url
-          stat = self.urlToKey url, options.type, root
+          stat = self.urlToKey url, type, root
 
           send(stat, dur, 'timer')
 
-          self.sendReadyStateTimes stat, xhr.realXHR?.readyStateTimes
+          self.sendReadyStateTimes stat, readyStateTimes
 
-          if xhr?.status?
-            if xhr?.status > 12000
+          if request?.status?
+            if request.status > 12000
               # Most browsers return status code 0 for aborted/failed requests.  IE returns
               # special status codes over 12000: http://msdn.microsoft.com/en-us/library/aa383770%28VS.85%29.aspx
               #
               # We'll track the 12xxx code, but also store it as a 0
               count("#{ stat }.0")
 
-            else if xhr.status isnt 0
-              count("#{ stat }.#{ xhr.status.toString().charAt(0) }xx")
+            else if request.status isnt 0
+              count("#{ stat }.#{ request.status.toString().charAt(0) }xx")
 
-            count("#{ stat }.#{ xhr.status }")
+            count("#{ stat }.#{ request.status }")
+
+        window.XMLHttpRequest = ->
+          req = new _XMLHttpRequest
+
+          Frosting.run ->
+            startTime = null
+            readyStateTimes = {}
+
+            _open = req.open
+            req.open = (type, url, async) ->
+              Frosting.run ->
+                readyStateTimes[0] = now()
+
+                req.addEventListener 'readystatechange', ->
+                  readyStateTimes[req.readyState] = now()
+                , false
+
+                req.addEventListener 'loadend', (event) ->
+                  done {type, url, event, startTime, readyStateTimes, request: req}
+                , false
+
+              _open.apply req, arguments
+
+            _start = req.start
+            req.start = ->
+              startTime = now()
+
+              _start.apply req, arguments
+
+          req
+
+
     }
 
     nextMakeClient = (nextPrefix='') ->
@@ -459,7 +453,7 @@ exportDef = ($, Frosting) ->
 
 if window?
   # On the client
-  exportDef(jQuery, Buttercream)
+  exportDef(Buttercream)
 else
   # Using CommonJS
-  module.exports = exportDef(require('underscore'), require('jquery'), require('buttercream'))
+  module.exports = exportDef(require('buttercream'))
