@@ -13,7 +13,7 @@ else
 # window.performance
 initTime = +new Date
 
-exportDef = (Env, _, $, Frosting) ->
+exportDef = ($, Frosting) ->
   # The max time we should wait between sends
   MAX_INTERVAL = 30000
 
@@ -42,11 +42,7 @@ exportDef = (Env, _, $, Frosting) ->
     'gauge': 'g'
     'counter': 'c'
 
-  HOSTS =
-    'prod': 'https://app.hubspot.com/bucky'
-    'qa': 'https://app.hubspotqa.com/bucky'
-
-  BUCKY_HOST = HOSTS[Env.getInternal('api.bucky')] ? HOSTS.qa
+  BUCKY_HOST = '/bucky'
 
   ACTIVE = Math.random() < SAMPLE
 
@@ -106,8 +102,8 @@ exportDef = (Env, _, $, Frosting) ->
       maxTimeout = setTimeout flush, MAX_INTERVAL
 
   sendQueue = ->
-    unless Env.deployed?('bucky')
-      #console.log "Would send bucky queue"
+    if DISABLED
+      console.log "Would send bucky queue"
       return
 
     out = {}
@@ -168,8 +164,6 @@ exportDef = (Env, _, $, Frosting) ->
     buildPath = (path) ->
       if prefix?.length
         path = prefix + '.' + path
-
-      path.replace '.ENV.', ".#{ Env.getInternal('bucky') }."
 
     send = (path, value, type='gauge') ->
       enqueue buildPath(path), value, type
@@ -435,7 +429,10 @@ exportDef = (Env, _, $, Frosting) ->
     }
 
     nextMakeClient = (nextPrefix='') ->
-      path = _.filter([prefix, nextPrefix], _.identity).join('.')
+      path = prefix ? ''
+      path += '.' if path and nextPrefix
+      path += nextPrefix if nextPrefix
+
       makeClient(path)
 
     exports = {
@@ -448,21 +445,21 @@ exportDef = (Env, _, $, Frosting) ->
       flush,
       history: HISTORY,
       active: ACTIVE,
-      enableAjaxMonitoring: _.bind(requests.monitor, requests)
+      enableAjaxMonitoring: ->
+        requests.monitor.apply requests, arguments
     }
 
-    _.map([exports, exports.timer, exports.requests], Frosting.wrap)
+    for fn in [exports, exports.timer, exports.requests]
+      Frosting.wrap(fn)
 
-    _.extend nextMakeClient, exports
+    for key, val of exports
+      nextMakeClient[key] = val
 
-  exports = makeClient()
-
-  module?.promise?.resolve exports
-  exports
+  makeClient()
 
 if window?
-  # Using HS Static
-  hubspot.define 'hubspot.bucky.client', ['enviro', '_', 'jQuery', 'hubspot.buttercream.frosting'], exportDef
+  # On the client
+  exportDef(jQuery, Buttercream)
 else
   # Using CommonJS
-  module.exports = exportDef(require('enviro'), require('underscore'), require('jquery'), require('buttercream'))
+  module.exports = exportDef(require('underscore'), require('jquery'), require('buttercream'))
