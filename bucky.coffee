@@ -77,7 +77,7 @@ exportDef = ->
   do updateActive = ->
     ACTIVE = options.active and Math.random() < options.sample
 
-  HISTORY = {}
+  HISTORY = []
 
   setOptions = (opts) ->
     extend options, opts
@@ -108,7 +108,7 @@ exportDef = ->
 
         value = queue[path].value + (value - queue[path].value) / count
 
-    HISTORY[path] = queue[path] = {value, type, count}
+    queue[path] = {value, type, count}
 
     do considerSending
 
@@ -143,6 +143,12 @@ exportDef = ->
 
     out = {}
     for key, point of queue
+      HISTORY.push
+        path: key
+        count: point.count
+        type: point.type
+        value: point.value
+
       unless TYPE_MAP[point.type]?
         log.error "Type #{ point.type } not understood by Bucky"
         continue
@@ -173,9 +179,6 @@ exportDef = ->
     request.send body
 
     queue = {}
-
-  getHistory: ->
-    HISTORY
 
   currentLatency = 0
   latencySent = false
