@@ -276,4 +276,4 @@ an idea of what sort of data points are being created.
 
 This project pushes data to the Bucky Server.
 
-[http://github.com/HubSpot/BuckyServer/READM.md](Server Documentation)
+[Server Documentation](http://github.com/HubSpot/BuckyServer)
