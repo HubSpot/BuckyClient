@@ -58,7 +58,7 @@ Some options you might be interested in:
 - `sample`: What fraction of clients should actually send data?  Use to subsample your clients if you have
   too much data coming in.
 
-Take a look at [the source](http://github.com/HubSpot/BuckyClient/blob/master/bucky.coffee#L27) for a
+Take a look at [the source](http://github.com/HubSpot/BuckyClient/blob/master/bucky.coffee#L34) for a
 full list of options.
 
 #### Sending Page Performance
