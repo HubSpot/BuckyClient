@@ -82,7 +82,7 @@ exportDef = ->
   setOptions = (opts) ->
     extend options, opts
 
-    if 'sample' of opts
+    if 'sample' of opts or 'active' of opts
       updateActive()
 
     options
