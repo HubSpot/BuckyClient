@@ -265,6 +265,13 @@ Bucky.request.transforms.enable('soup', function(url){ return url.split('').reve
 Enabled tests will be added to the beginning of the `enabled` list, meaning they will be executed before
 any other tranform.  Edit the `Bucky.requests.tranforms.enabled` array if you need more specific control.
 
+The order of the transforms is very important.  If you, for example, were to run the `id` transform before
+the `guid` one, the `guid` transform wouldn't match any guid which began with a number (as the number would
+have already been stripped out, making the guid the wrong length).
+
+When you first enable request monitoring, it's a good idea to keep an eye on the Bucky logs to get
+an idea of what sort of data points are being created.
+
 ### App Server
 
 This project pushes data to the Bucky Server.
