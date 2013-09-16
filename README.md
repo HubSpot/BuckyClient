@@ -14,7 +14,7 @@ collecting stats, you should start!  What gets measured gets managed.
 ### Server
 
 You can play with Bucky just using the client, but if you'd like to start collecting data, see the
-[http://github.com/HubSpot/BuckyServer](Server Instructions).
+[Server Instructions](http://github.com/HubSpot/BuckyServer).
 
 ### Setup
 
