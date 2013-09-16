@@ -337,9 +337,9 @@ exportDef = ->
 
         enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain']
 
-        enable: (name, test) ->
+        enable: (name, test, replacement='') ->
           if test?
-            @mapping[name] = test
+            @mapping[name] = [test, replacement]
 
           @enabled.splice 0, 0, name
 
