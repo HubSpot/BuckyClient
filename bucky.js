@@ -1,5 +1,5 @@
 (function() {
-  var exportDef, initTime, now,
+  var exportDef, extend, initTime, log, now, _XMLHttpRequest,
     __slice = [].slice;
 
   if ((typeof process !== "undefined" && process !== null ? process.hrtime : void 0) != null) {
@@ -17,35 +17,76 @@
 
   initTime = +(new Date);
 
-  exportDef = function(Env, _, $, Frosting) {
-    var ACTIVE, AGGREGATION_INTERVAL, BUCKY_HOST, DECIMAL_PRECISION, HISTORY, HOSTS, MAX_INTERVAL, SAMPLE, SEND_LATENCY, TYPE_MAP, WARN_UNSTARTED_REQUEST, considerSending, currentLatency, enqueue, exports, flush, latencySent, makeClient, maxTimeout, queue, round, sendQueue, sendTimeout, updateLatency, _ref, _ref1;
-    MAX_INTERVAL = 30000;
-    AGGREGATION_INTERVAL = 5000;
-    DECIMAL_PRECISION = 3;
-    SEND_LATENCY = true;
-    SAMPLE = 1;
+  _XMLHttpRequest = window.XMLHttpRequest;
+
+  extend = function() {
+    var a, key, obj, objs, val, _i, _len, _ref;
+    a = arguments[0], objs = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
+    _ref = objs.reverse();
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      obj = _ref[_i];
+      for (key in obj) {
+        val = obj[key];
+        a[key] = val;
+      }
+    }
+    return a;
+  };
+
+  log = function() {
+    var msgs, _ref;
+    msgs = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    if ((typeof console !== "undefined" && console !== null ? (_ref = console.log) != null ? _ref.call : void 0 : void 0) != null) {
+      return console.log.apply(console, msgs);
+    }
+  };
+
+  log.error = function() {
+    var msgs, _ref;
+    msgs = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+    if ((typeof console !== "undefined" && console !== null ? (_ref = console.error) != null ? _ref.call : void 0 : void 0) != null) {
+      return console.error.apply(console, msgs);
+    }
+  };
+
+  exportDef = function() {
+    var ACTIVE, HISTORY, TYPE_MAP, considerSending, currentLatency, defaults, enqueue, flush, latencySent, makeClient, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, updateActive, updateLatency;
+    defaults = {
+      host: '/bucky',
+      maxInterval: 30000,
+      aggregationInterval: 5000,
+      decimalPrecision: 3,
+      sendLatency: false,
+      sample: 1,
+      active: true
+    };
+    options = extend({}, defaults);
     TYPE_MAP = {
       'timer': 'ms',
       'gauge': 'g',
       'counter': 'c'
     };
-    HOSTS = {
-      'prod': 'https://app.hubspot.com/bucky',
-      'qa': 'https://app.hubspotqa.com/bucky'
-    };
-    BUCKY_HOST = (_ref = HOSTS[Env.getInternal('api.bucky')]) != null ? _ref : HOSTS.qa;
-    ACTIVE = Math.random() < SAMPLE;
-    WARN_UNSTARTED_REQUEST = true;
+    ACTIVE = options.active;
+    (updateActive = function() {
+      return ACTIVE = options.active && Math.random() < options.sample;
+    })();
     HISTORY = {};
+    setOptions = function(opts) {
+      extend(options, opts);
+      if ('sample' in opts) {
+        updateActive();
+      }
+      return options;
+    };
     round = function(num, precision) {
       if (precision == null) {
-        precision = DECIMAL_PRECISION;
+        precision = options.decimalPrecision;
       }
       return num.toFixed(precision);
     };
     queue = {};
     enqueue = function(path, value, type) {
-      var count, _ref1;
+      var count, _ref;
       if (!ACTIVE) {
         return;
       }
@@ -54,7 +95,7 @@
         if (type === 'counter') {
           value += queue[path].value;
         } else {
-          count = (_ref1 = queue[path].count) != null ? _ref1 : count;
+          count = (_ref = queue[path].count) != null ? _ref : count;
           count++;
           value = queue[path].value + (value - queue[path].value) / count;
         }
@@ -77,28 +118,26 @@
     };
     considerSending = function() {
       clearTimeout(sendTimeout);
-      sendTimeout = setTimeout(flush, AGGREGATION_INTERVAL);
+      sendTimeout = setTimeout(flush, options.aggregationInterval);
       if (maxTimeout == null) {
-        return maxTimeout = setTimeout(flush, MAX_INTERVAL);
+        return maxTimeout = setTimeout(flush, options.maxInterval);
       }
     };
     sendQueue = function() {
-      var key, out, point, sendStart, value, _ref1;
-      if (!(typeof Env.deployed === "function" ? Env.deployed('bucky') : void 0)) {
+      var body, key, out, point, request, sendStart, value, _ref;
+      if (!ACTIVE) {
+        log("Would send bucky queue");
         return;
       }
       out = {};
       for (key in queue) {
         point = queue[key];
         if (TYPE_MAP[point.type] == null) {
-          console.error("Type " + point.type + " not understood by Bucky");
-          continue;
-        }
-        if (point.type === 'timer' && point.value > 120000) {
+          log.error("Type " + point.type + " not understood by Bucky");
           continue;
         }
         value = point.value;
-        if ((_ref1 = point.type) === 'gauge' || _ref1 === 'timer') {
+        if ((_ref = point.type) === 'gauge' || _ref === 'timer') {
           value = round(value);
         }
         out[key] = "" + value + "|" + TYPE_MAP[point.type];
@@ -107,21 +146,15 @@
         }
       }
       sendStart = now();
-      $.ajax({
-        url: BUCKY_HOST + '/send',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(out),
-        _buckySend: true,
-        error: function(e) {
-          return console.error(e, "sending data");
-        },
-        success: function() {
-          var sendEnd;
-          sendEnd = now();
-          return updateLatency(sendEnd - sendStart);
-        }
-      });
+      body = JSON.stringify(out);
+      request = new _XMLHttpRequest;
+      request.open('POST', "" + options.host + "/send", true);
+      request.setRequestHeader('Content-Type', 'application/json');
+      request.setRequestHeader('Content-Length', body.length);
+      request.addEventListener('load', function() {
+        return updateLatency(now() - sendStart);
+      }, false);
+      request.send(body);
       return queue = {};
     };
     ({
@@ -133,7 +166,7 @@
     latencySent = false;
     updateLatency = function(time) {
       currentLatency = time;
-      if (SEND_LATENCY && !latencySent) {
+      if (options.sendLatency && !latencySent) {
         enqueue('bucky.latency', time, 'timer');
         latencySent = true;
         return setTimeout(function() {
@@ -142,15 +175,14 @@
       }
     };
     makeClient = function(prefix) {
-      var buildPath, count, exports, nextMakeClient, requests, send, sendPerformanceData, sentPerformanceData, timer;
+      var buildPath, count, exports, key, nextMakeClient, requests, send, sendPerformanceData, sentPerformanceData, timer, val, _results;
       if (prefix == null) {
         prefix = '';
       }
       buildPath = function(path) {
         if (prefix != null ? prefix.length : void 0) {
-          path = prefix + '.' + path;
+          return path = prefix + '.' + path;
         }
-        return path.replace('.ENV.', "." + (Env.getInternal('bucky')) + ".");
       };
       send = function(path, value, type) {
         if (type == null) {
@@ -205,7 +237,7 @@
         stop: function(path) {
           var duration;
           if (timer.TIMES[path] == null) {
-            console.error("Timer " + path + " ended without having been started");
+            log.error("Timer " + path + " ended without having been started");
             return;
           }
           duration = now() - timer.TIMES[path];
@@ -219,8 +251,8 @@
               return +(new Date);
             };
           } else {
-            start = now();
             _now = now;
+            start = _now();
           }
           last = start;
           return {
@@ -258,12 +290,12 @@
           return timer.send(path, time - start);
         },
         navigationStart: function() {
-          var _ref1, _ref2, _ref3;
-          return (_ref1 = typeof window !== "undefined" && window !== null ? (_ref2 = window.performance) != null ? (_ref3 = _ref2.timing) != null ? _ref3.navigationStart : void 0 : void 0 : void 0) != null ? _ref1 : initTime;
+          var _ref, _ref1, _ref2;
+          return (_ref = typeof window !== "undefined" && window !== null ? (_ref1 = window.performance) != null ? (_ref2 = _ref1.timing) != null ? _ref2.navigationStart : void 0 : void 0 : void 0) != null ? _ref : initTime;
         },
         responseEnd: function() {
-          var _ref1, _ref2, _ref3;
-          return (_ref1 = typeof window !== "undefined" && window !== null ? (_ref2 = window.performance) != null ? (_ref3 = _ref2.timing) != null ? _ref3.responseEnd : void 0 : void 0 : void 0) != null ? _ref1 : initTime;
+          var _ref, _ref1, _ref2;
+          return (_ref = typeof window !== "undefined" && window !== null ? (_ref1 = window.performance) != null ? (_ref2 = _ref1.timing) != null ? _ref2.responseEnd : void 0 : void 0 : void 0) != null ? _ref : initTime;
         },
         now: function() {
           return now();
@@ -277,36 +309,67 @@
       };
       sentPerformanceData = false;
       sendPerformanceData = function(path) {
-        var key, start, time, _ref1, _ref2, _ref3;
+        var key, start, time, _ref, _ref1, _ref2;
         if (path == null) {
           path = 'timing';
         }
-        if ((typeof window !== "undefined" && window !== null ? (_ref1 = window.performance) != null ? _ref1.timing : void 0 : void 0) == null) {
+        if ((typeof window !== "undefined" && window !== null ? (_ref = window.performance) != null ? _ref.timing : void 0 : void 0) == null) {
           return false;
         }
         if (sentPerformanceData) {
           return false;
         }
-        if ((_ref2 = document.readyState) === 'uninitialized' || _ref2 === 'loading') {
+        if ((_ref1 = document.readyState) === 'uninitialized' || _ref1 === 'loading') {
           if (typeof document.addEventListener === "function") {
             document.addEventListener('DOMContentLoaded', function() {
               return sendPerformanceData.apply(this, arguments);
-            });
+            }, false);
           }
-          return;
+          return false;
         }
         sentPerformanceData = true;
         start = window.performance.timing.navigationStart;
-        _ref3 = window.performance.timing;
-        for (key in _ref3) {
-          time = _ref3[key];
-          if (time !== 0) {
-            send("" + path + "." + key, time - start, 'timer');
+        _ref2 = window.performance.timing;
+        for (key in _ref2) {
+          time = _ref2[key];
+          if (time) {
+            timer.send("" + path + "." + key, time - start);
           }
         }
         return true;
       };
       requests = {
+        tranforms: {
+          mapping: {
+            guid: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig,
+            sha1: /\/[0-9a-f]{40}/ig,
+            md5: /\/[0-9a-f]{32}/ig,
+            id: /\/[0-9;_\-]+/g,
+            email: /\/[^/]+@[^/]+/g,
+            domain: /\/[^/]+\.[a-z]{2,3}/ig
+          },
+          enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain'],
+          enable: function(name, test, replacement) {
+            if (replacement == null) {
+              replacement = '';
+            }
+            if (test != null) {
+              this.mapping[name] = [test, replacement];
+            }
+            return this.enabled.splice(0, 0, name);
+          },
+          disable: function(name) {
+            var i, val, _ref;
+            _ref = this.enabled;
+            for (val in _ref) {
+              i = _ref[val];
+              if (val === name) {
+                this.enabled.splice(i, 1);
+                return;
+              }
+            }
+          }
+        },
         sendReadyStateTimes: function(path, times) {
           var code, codeMapping, diffs, last, status, time, val, _results;
           if (times == null) {
@@ -330,27 +393,33 @@
           _results = [];
           for (status in diffs) {
             val = diffs[status];
-            _results.push(send("" + path + "." + status, val, 'timer'));
+            _results.push(timer.send("" + path + "." + status, val));
           }
           return _results;
         },
         urlToKey: function(url, type, root) {
-          var host, parsedUrl, path, stat, _ref1;
+          var host, mapping, mappingName, parsedUrl, path, stat, _i, _len, _ref, _ref1;
           url = url.replace(/https?:\/\//i, '');
           parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url);
           host = parsedUrl[1];
-          path = (_ref1 = parsedUrl[2]) != null ? _ref1 : '';
-          path = path.replace(/\/events?\/\w{8,12}/ig, '/events');
-          path = path.replace(/\/campaigns?\/\w{15}(\w{3})?/ig, '/campaigns');
-          path = path.replace(/\/_[^/]+/g, '');
-          path = path.replace(/\.js$/, '');
-          path = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig, '');
-          path = path.replace(/\/[0-9a-f]{40}/ig, '');
-          path = path.replace(/\/[0-9a-f]{32}/ig, '');
-          path = path.replace(/\/[0-9;_\-]+/g, '');
-          path = path.replace(/\/[^/]+@[^/]+/g, '');
-          path = path.replace(/\/[^/]+\.[a-z]{2,3}/ig, '');
-          path = path.replace(/\/static(\-\d+\.\d+)?/g, '/static');
+          path = (_ref = parsedUrl[2]) != null ? _ref : '';
+          _ref1 = this.transforms.enabled;
+          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+            mappingName = _ref1[_i];
+            mapping = this.transforms.mapping[mappingName];
+            if (mapping == null) {
+              log.error("Bucky Error: Attempted to enable a mapping which is not defined: " + mappingName);
+              continue;
+            }
+            if (typeof mapping === 'function') {
+              path = mapping(path, url, type, root);
+              continue;
+            }
+            if (typeof mapping === 'string') {
+              mapping = [mapping, ''];
+            }
+            path = path.replace(mapping[0], mapping[1]);
+          }
           path = decodeURIComponent(path);
           path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_');
           stat = host + path.replace(/[\/ ]/g, '.');
@@ -379,67 +448,73 @@
           }
         },
         monitor: function(root) {
-          var lastXHR, self;
+          var done, self;
           if (root == null) {
             root = 'requests';
           }
-          lastXHR = void 0;
-          jQuery(document).ajaxSend(Frosting.wrap(function(event, jqXHR, options) {
-            jqXHR.startTime = now();
-            return lastXHR = jqXHR;
-          }));
-          jQuery.ajaxSettings.xhr = function() {
-            var e, xhr;
+          self = this;
+          done = function(_arg) {
+            var dur, event, request, startTime, stat, type, url;
+            type = _arg.type, url = _arg.url, event = _arg.event, request = _arg.request, startTime = _arg.startTime;
+            if (startTime != null) {
+              dur = now() - startTime;
+            } else {
+              return;
+            }
+            url = self.getFullUrl(url);
+            stat = self.urlToKey(url, type, root);
+            send(stat, dur, 'timer');
+            self.sendReadyStateTimes(stat, readyStateTimes);
+            if ((request != null ? request.status : void 0) != null) {
+              if (request.status > 12000) {
+                count("" + stat + ".0");
+              } else if (request.status !== 0) {
+                count("" + stat + "." + (request.status.toString().charAt(0)) + "xx");
+              }
+              return count("" + stat + "." + request.status);
+            }
+          };
+          return window.XMLHttpRequest = function() {
+            var e, readyStateTimes, req, startTime, _open, _start;
+            req = new _XMLHttpRequest;
             try {
-              xhr = new XMLHttpRequest();
+              startTime = null;
+              readyStateTimes = {};
+              _open = req.open;
+              req.open = function(type, url, async) {
+                var e;
+                try {
+                  readyStateTimes[0] = now();
+                  req.addEventListener('readystatechange', function() {
+                    return readyStateTimes[req.readyState] = now();
+                  }, false);
+                  req.addEventListener('loadend', function(event) {
+                    return done({
+                      type: type,
+                      url: url,
+                      event: event,
+                      startTime: startTime,
+                      readyStateTimes: readyStateTimes,
+                      request: req
+                    });
+                  }, false);
+                } catch (_error) {
+                  e = _error;
+                  log.error("Bucky error monitoring XHR open call", e);
+                }
+                return _open.apply(req, arguments);
+              };
+              _start = req.start;
+              req.start = function() {
+                startTime = now();
+                return _start.apply(req, arguments);
+              };
             } catch (_error) {
               e = _error;
+              log.error("Bucky error monitoring XHR", e);
             }
-            Frosting.run(function() {
-              if (xhr != null) {
-                xhr.readyStateTimes = {
-                  0: now()
-                };
-              }
-              if (lastXHR != null) {
-                lastXHR.realXHR = xhr;
-              }
-              lastXHR = null;
-              return xhr != null ? xhr.addEventListener('readystatechange', function() {
-                return xhr.readyStateTimes[xhr.readyState] = now();
-              }) : void 0;
-            });
-            return xhr;
+            return req;
           };
-          self = this;
-          return jQuery(document).ajaxComplete(Frosting.wrap(function(event, xhr, options) {
-            var dur, stat, url, _ref1;
-            if (options._buckySend) {
-              return;
-            }
-            if (xhr.startTime != null) {
-              dur = now() - xhr.startTime;
-            } else {
-              if (WARN_UNSTARTED_REQUEST) {
-                hlog("A request was completed which Bucky did not record having been started.  Is bucky.request.monitor being called too late?");
-              }
-              WARN_UNSTARTED_REQUEST = false;
-              return;
-            }
-            url = options.url;
-            url = self.getFullUrl(url);
-            stat = self.urlToKey(url, options.type, root);
-            send(stat, dur, 'timer');
-            self.sendReadyStateTimes(stat, (_ref1 = xhr.realXHR) != null ? _ref1.readyStateTimes : void 0);
-            if ((xhr != null ? xhr.status : void 0) != null) {
-              if ((xhr != null ? xhr.status : void 0) > 12000) {
-                count("" + stat + ".0");
-              } else if (xhr.status !== 0) {
-                count("" + stat + "." + (xhr.status.toString().charAt(0)) + "xx");
-              }
-              return count("" + stat + "." + xhr.status);
-            }
-          }));
         }
       };
       nextMakeClient = function(nextPrefix) {
@@ -447,7 +522,13 @@
         if (nextPrefix == null) {
           nextPrefix = '';
         }
-        path = _.filter([prefix, nextPrefix], _.identity).join('.');
+        path = prefix != null ? prefix : '';
+        if (path && nextPrefix) {
+          path += '.';
+        }
+        if (nextPrefix) {
+          path += nextPrefix;
+        }
         return makeClient(path);
       };
       exports = {
@@ -458,26 +539,29 @@
         requests: requests,
         sendPerformanceData: sendPerformanceData,
         flush: flush,
+        setOptions: setOptions,
         history: HISTORY,
         active: ACTIVE,
-        enableAjaxMonitoring: _.bind(requests.monitor, requests)
+        enableAjaxMonitoring: function() {
+          return requests.monitor.apply(requests, arguments);
+        }
       };
-      _.map([exports, exports.timer, exports.requests], Frosting.wrap);
-      return _.extend(nextMakeClient, exports);
-    };
-    exports = makeClient();
-    if (typeof module !== "undefined" && module !== null) {
-      if ((_ref1 = module.promise) != null) {
-        _ref1.resolve(exports);
+      _results = [];
+      for (key in exports) {
+        val = exports[key];
+        _results.push(nextMakeClient[key] = val);
       }
-    }
-    return exports;
+      return _results;
+    };
+    return makeClient();
   };
 
-  if (typeof window !== "undefined" && window !== null) {
-    hubspot.define('hubspot.bucky.client', ['enviro', '_', 'jQuery', 'hubspot.buttercream.frosting'], exportDef);
+  if (typeof define === 'function' && define.amd) {
+    define(exportDef);
+  } else if (typeof exports === 'object') {
+    module.exports = exportDef();
   } else {
-    module.exports = exportDef(require('enviro'), require('underscore'), require('jquery'), require('buttercream'));
+    window.Bucky = exportDef();
   }
 
 }).call(this);
