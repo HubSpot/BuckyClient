@@ -193,4 +193,4 @@ on the server where you might be pushing out many points with the same key).
 
 This project pushes data to the Bucky Server.
 
-[http://github.com/HubSpot/BuckyServer/README.md](Server Documentation)
+[Server Documentation](http://github.com/HubSpot/BuckyServer/README.md)
