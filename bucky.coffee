@@ -22,7 +22,15 @@ extend = (a, objs...) ->
       a[key] = val
   a
 
-exportDef = (Frosting) ->
+log = (msgs...) ->
+  if console?.log?.call?
+    console.log msgs...
+
+log.error = (msgs...) ->
+  if console?.error?.call?
+    console.error msgs...
+
+exportDef = ->
   defaults =
     # Where is the Bucky server hosted.  This should be both the host and the APP_ROOT (if you've
     # defined one).  This default assumes its at the same host as your app.
@@ -130,13 +138,13 @@ exportDef = (Frosting) ->
 
   sendQueue = ->
     if not ACTIVE
-      console.log "Would send bucky queue"
+      log "Would send bucky queue"
       return
 
     out = {}
     for key, point of queue
       unless TYPE_MAP[point.type]?
-        console.error "Type #{ point.type } not understood by Bucky"
+        log.error "Type #{ point.type } not understood by Bucky"
         continue
 
       value = point.value
@@ -231,7 +239,7 @@ exportDef = (Frosting) ->
 
       stop: (path) ->
         if not timer.TIMES[path]?
-          console.error "Timer #{ path } ended without having been started"
+          log.error "Timer #{ path } ended without having been started"
           return
 
         duration = now() - timer.TIMES[path]
@@ -249,8 +257,8 @@ exportDef = (Frosting) ->
         if start?
           _now = -> +new Date
         else
-          start = now()
           _now = now
+          start = _now()
 
         last = start
 
@@ -305,19 +313,42 @@ exportDef = (Frosting) ->
         # The data isn't fully ready until document load
         document.addEventListener? 'DOMContentLoaded', ->
           sendPerformanceData.apply(@, arguments)
+        , false
 
-        return
+        return false
 
       sentPerformanceData = true
 
       start = window.performance.timing.navigationStart
-      for key, time of window.performance.timing
-        if time isnt 0
-          send "#{ path }.#{ key }", (time - start), 'timer'
+      for key, time of window.performance.timing when time
+        timer.send "#{ path }.#{ key }", (time - start)
 
       return true
 
     requests = {
+      tranforms:
+        mapping:
+          guid: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig
+          sha1: /\/[0-9a-f]{40}/ig
+          md5: /\/[0-9a-f]{32}/ig
+          id: /\/[0-9;_\-]+/g
+          email: /\/[^/]+@[^/]+/g
+          domain: /\/[^/]+\.[a-z]{2,3}/ig
+
+        enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain']
+
+        enable: (name, test) ->
+          if test?
+            @mapping[name] = test
+
+          @enabled.splice 0, 0, name
+
+        disable: (name) ->
+          for val, i of @enabled
+            if val is name
+              @enabled.splice i, 1
+              return
+
       sendReadyStateTimes: (path, times) ->
         return unless times?
 
@@ -336,7 +367,7 @@ exportDef = (Frosting) ->
           last = time
 
         for status, val of diffs
-          send "#{ path }.#{ status }", val, 'timer'
+          timer.send "#{ path }.#{ status }", val
 
       urlToKey: (url, type, root) ->
         url = url.replace /https?:\/\//i, ''
@@ -345,17 +376,21 @@ exportDef = (Frosting) ->
         host = parsedUrl[1]
         path = parsedUrl[2] ? ''
 
-        path = path.replace(/\/events?\/\w{8,12}/ig, '/events') # Analytics events
-        path = path.replace(/\/campaigns?\/\w{15}(\w{3})?/ig, '/campaigns') # SF campaigns
-        path = path.replace(/\/_[^/]+/g, '') # Contact secure ids
-        path = path.replace(/\.js$/, '') # JS file extensions
-        path = path.replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig, '') # GUIDs
-        path = path.replace(/\/[0-9a-f]{40}/ig, '') # Sha1s
-        path = path.replace(/\/[0-9a-f]{32}/ig, '') # MD5s
-        path = path.replace(/\/[0-9;_\-]+/g, '') # Ids, including content's ; seperated ones, import ids, and social underscore-joined ids
-        path = path.replace(/\/[^/]+@[^/]+/g, '') # Email addresses
-        path = path.replace(/\/[^/]+\.[a-z]{2,3}/ig, '') # Domains in the URL
-        path = path.replace(/\/static(\-\d+\.\d+)?/g, '/static') # Static version identifiers
+        for mappingName in @transforms.enabled
+          mapping = @transforms.mapping[mappingName]
+
+          if not mapping?
+            log.error "Bucky Error: Attempted to enable a mapping which is not defined: #{ mappingName }"
+            continue
+
+          if typeof mapping is 'function'
+            path = mapping path, url, type, root
+            continue
+
+          if typeof mapping is 'string'
+            mapping = [mapping, '']
+    
+          path = path.replace(mapping[0], mapping[1])
 
         path = decodeURIComponent(path)
 
@@ -387,7 +422,7 @@ exportDef = (Frosting) ->
 
       monitor: (root='requests') ->
         self = this
-        done = Frosting.wrap ({type, url, event, request, startTime}) ->
+        done = ({type, url, event, request, startTime}) ->
           if startTime?
             dur = now() - startTime
           else
@@ -416,13 +451,13 @@ exportDef = (Frosting) ->
         window.XMLHttpRequest = ->
           req = new _XMLHttpRequest
 
-          Frosting.run ->
+          try
             startTime = null
             readyStateTimes = {}
 
             _open = req.open
             req.open = (type, url, async) ->
-              Frosting.run ->
+              try
                 readyStateTimes[0] = now()
 
                 req.addEventListener 'readystatechange', ->
@@ -432,6 +467,8 @@ exportDef = (Frosting) ->
                 req.addEventListener 'loadend', (event) ->
                   done {type, url, event, startTime, readyStateTimes, request: req}
                 , false
+              catch e
+                log.error "Bucky error monitoring XHR open call", e
 
               _open.apply req, arguments
 
@@ -440,10 +477,10 @@ exportDef = (Frosting) ->
               startTime = now()
 
               _start.apply req, arguments
+          catch e
+            log.error "Bucky error monitoring XHR", e
 
           req
-
-
     }
 
     nextMakeClient = (nextPrefix='') ->
@@ -468,17 +505,17 @@ exportDef = (Frosting) ->
         requests.monitor.apply requests, arguments
     }
 
-    for fn in [exports, exports.timer, exports.requests]
-      Frosting.wrap(fn)
-
     for key, val of exports
       nextMakeClient[key] = val
 
   makeClient()
 
-if window?
-  # On the client
-  exportDef(Buttercream)
+if typeof define is 'function' and define.amd
+  # AMD
+  define exportDef
+else if typeof exports is 'object'
+  # Node
+  module.exports = exportDef()
 else
-  # Using CommonJS
-  module.exports = exportDef(require('buttercream'))
+  # Global
+  window.Bucky = exportDef()

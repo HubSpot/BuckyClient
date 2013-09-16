@@ -20,8 +20,11 @@ You can play with Bucky just using the client, but if you'd like to start collec
 
 #### From The Client
 
-- Include `BuckyClient/client.js` file on your page
-- The `Bucky` object will be available globally
+Include `BuckyClient/bucky.js` file on your page
+
+The `Bucky` object will be available globally.
+
+Bucky can also be loaded with AMD or Browserify.
 
 #### From Node
 
@@ -33,11 +36,36 @@ npm install bucky
 bucky = require('bucky')
 ```
 
+### Configuring
+
+Before sending any data, call `setOptions`:
+
+```javascript
+Bucky.setOptions({
+  host: 'http://myweb.site:9999/bucky'
+});
+```
+
+Some options you might be interested in:
+
+- `host`: Where we can reach your [http://github.com/HubSpot/BuckyServer](Bucky server), including the
+  APP_ROOT.
+
+  The Bucky server has a very liberal CORS config, so we should be able to connect to it even if
+  it's on a different domain, but hosting it on the same domain and port will save you some preflight requests.
+
+- `active`: Should Bucky actually send data?  Use this to disable Bucky during local dev for example.
+- `sample`: What fraction of clients should actually send data?  Use to subsample your clients if you have
+  too much data coming in.
+
+Take a look at [the source](http://github.com/HubSpot/BuckyClient/blob/master/bucky.coffee#L27) for a
+full list of options.
+
 #### Sending Page Performance
 
-Chrome logs a bunch of page performance data, bucky includes a method for writing all of this in
-one go.  It won't do anything on browsers which don't support the performance.timing api.  You should
-call it after document.load.
+Modern browsers log a bunch of page performance data, bucky includes a method for writing all of this in
+one go.  It won't do anything on browsers which don't support the performance.timing api.  Call it whenver,
+it will bind an event if the data isn't ready yet.
 
 ```coffeescript
 Bucky.sendPerformanceData('where.the.data.should.go')
@@ -60,20 +88,11 @@ Backbone.history.on 'route', (router, route) ->
 
 #### Sending AJAX Request Time
 
-Bucky can automatically log all ajax requests made by hooking into jQuery.ajax and doing some transformations
+Bucky can automatically log all ajax requests made by hooking into XMLHttpRequest and doing some transformations
 on the url to try and create a graphite key from it.  Enable it as early in your app's load as is possible:
 
 ```coffeescript
 Bucky.requests.monitor('my.project.requests')
-```
-
-### Sending Points
-
-Bucky includes a js client which can be used both on the client and in Node.  It will automatically
-enqueue your messages and send them in bulk periodically.
-
-```coffeescript
-Bucky.send 'my.awesome.datapoint', 2432.43434
 ```
 
 #### Prefixing
@@ -87,7 +106,7 @@ myBucky = Bucky('awesome.app.view')
 myBucky.send('data.point', 5)
 ```
 
-You can continually call bucky to add more prefixes:
+You can repeatedly call clients to add more prefixes:
 
 ```coffeescript
 contactsBucky = bucky('contacts')
@@ -98,11 +117,15 @@ cwBucky.send('x', 1) # Data goes in contacts.web.x
 
 #### Counting Things
 
+Bucky includes a js client which can be used both on the client and in Node.  It will automatically
+enqueue your messages and send them in bulk periodically.
+
 By default `send` sends absolute values, this is rarely what you want when working from the client, incrementing
 a counter is usually more helpful:
 
 ```coffeescript
 bucky.count('my.awesome.thing')
+bucky.count('number.of.chips.eaten', 5)
 ```
 
 #### Timing Things
@@ -169,12 +192,24 @@ bucky.timer.mark('my.thing.happened')
 It acts like a timer where the start is always navigation start.
 
 The stopwatch method allows you to begin a timer which can be stopped multiple times:
+
 ```coffeescript
 watch = bucky.stopwatch('some.prefix.if.you.want')
 ```
 
 You can then call `watch.mark('key')` to send the time since the stopwatch started, or
 `watch.split('key')` to send the time since the last split.
+
+### Sending Points
+
+If you want to send absolute values (rare from the client), you can use send directly.
+
+The one use we've had for this is sending `+new Date` from every client to get an idea
+of how skewed their clocks are.
+
+```coffeescript
+Bucky.send 'my.awesome.datapoint', 2432.43434
+```
 
 ### Your Stats
 
@@ -189,8 +224,51 @@ are incremented).  This means that the max and min numbers you get from statsd a
 5-30 second bucket.  Note that this is per-client, not for the entire bucky process (it's generally only important
 on the server where you might be pushing out many points with the same key).
 
+### Bucky Object
+
+The Bucky object provides a couple extra properties you can access:
+
+- `Bucky.history`: The history of all datapoints ever send.
+- `Bucky.active`: Is Bucky sending data?  This can change if you change the `active` or `sample` settings.
+- `Bucky.flush()`: Send the Bucky queue immediately
+- `Bucky.timer.now()`: A clock based on the most precise time available (not guarenteed to be from the epoch)
+
+### URL -> Key Transformation
+
+`request.monitor` attempts to automatically transform your urls into keys.  It does a bunch of transformations
+with the goal of removing anything which will vary per-request, so you end up with stats per-endpoint.  These
+tranformations include:
+
+- Stripping GUIDS, IDS, SHA1s, MD5s
+- Stripping email addresses
+- Stripping domains
+- Stripping .com and www.
+- Replacing slashes and spaces with '.'
+
+If you find these tranformations too invasive, or not invasive enough, you can modify them.
+
+```javascript
+# You can diable tranforms with `.disable`
+Bucky.requests.transforms.disable('guid');
+
+# You can enable transforms with `.enable`
+Bucky.requests.tranforms.enable('guid');
+
+# `.enable` can also be used to add a new tranform:
+Bucky.requests.transforms.enable('my-ids', /[0-9]{4}-[0-9]{12}/g)
+
+# The third argument defines what the match is replaced with (rather than just eliminating it):
+Bucky.requests.transforms.enable('campaign', /campaigns\/\w{15}/ig, '/campaigns')
+
+# You can also just provide a function which takes in the url, and returns it modified:
+Bucky.request.transforms.enable('soup', function(url){ return url.split('').reverse().join(''); })
+```
+
+Enabled tests will be added to the beginning of the `enabled` list, meaning they will be executed before
+any other tranform.  Edit the `Bucky.requests.tranforms.enabled` array if you need more specific control.
+
 ### App Server
 
 This project pushes data to the Bucky Server.
 
-[http://github.com/HubSpot/BuckyServer/README.md](Server Documentation)
+[http://github.com/HubSpot/BuckyServer/READM.md](Server Documentation)
