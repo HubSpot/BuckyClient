@@ -4,20 +4,24 @@ Bucky
 Bucky is a client and server for sending stats from the client and node into statsd+graphite, OpenTSDB, or any
 other stats aggregator of your choice.
 
+It can automatically measure how long your pages take to load, how long AJAX requests take and how long
+various functions take to run.  Most importantly, it's taking the measurements on actual page loads,
+so the data has the potential to be much more valuable than in vitro measurements.
+
+If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you're not
+collecting stats, you should start!  What gets measured gets managed.
+
 ### Server
 
 You can play with Bucky just using the client, but if you'd like to start collecting data, see the
-[http://github.com/HubSpot/BuckyServer](Server Instructions)
+[http://github.com/HubSpot/BuckyServer](Server Instructions).
 
 ### Setup
 
 #### From The Client
 
-```javascript
-// Include BuckyClient/client.js file on your page
-
-Bucky will be available globally.
-```
+- Include `BuckyClient/client.js` file on your page
+- The `Bucky` object will be available globally
 
 #### From Node
 
@@ -27,6 +31,40 @@ npm install bucky
 
 ```coffeescript
 bucky = require('bucky')
+```
+
+#### Sending Page Performance
+
+Chrome logs a bunch of page performance data, bucky includes a method for writing all of this in
+one go.  It won't do anything on browsers which don't support the performance.timing api.  You should
+call it after document.load.
+
+```coffeescript
+Bucky.sendPerformanceData('where.the.data.should.go')
+```
+
+The two most relevant stats provided are `responseEnd` which is the amount of time it took for the
+original page to be loaded and `domInteractive` which is the amount of time before the page has
+finished loaded and can be interacted with by the user.
+
+As a reminder: this data is browser specific, so it will likely skew lower than what users on
+old browsers see.
+
+If you're using Backbone, it might be a good idea to send your data based on route:
+
+```coffeescript
+Backbone.history.on 'route', (router, route) ->
+   # Will only send on the initial page load:
+   Bucky.sendPerformanceData("some.location.page.#{ route }")
+```
+
+#### Sending AJAX Request Time
+
+Bucky can automatically log all ajax requests made by hooking into jQuery.ajax and doing some transformations
+on the url to try and create a graphite key from it.  Enable it as early in your app's load as is possible:
+
+```coffeescript
+Bucky.requests.monitor('my.project.requests')
 ```
 
 ### Sending Points
@@ -43,12 +81,10 @@ Bucky.send 'my.awesome.datapoint', 2432.43434
 You can build a client which will prefix all of your datapoints by calling bucky as a function:
 
 ```coffeescript
-myBucky = Bucky('awesome.app.ENV.view')
+myBucky = Bucky('awesome.app.view')
 
 # You can then use all of the normal methods:
 myBucky.send('data.point', 5)
-
-# ENV in the path will get replaced with either 'qa' or 'prod'.
 ```
 
 You can continually call bucky to add more prefixes:
@@ -130,6 +166,8 @@ Bucky also includes a function for measuring the time since the navigationStart 
 bucky.timer.mark('my.thing.happened')
 ```
 
+It acts like a timer where the start is always navigation start.
+
 The stopwatch method allows you to begin a timer which can be stopped multiple times:
 ```coffeescript
 watch = bucky.stopwatch('some.prefix.if.you.want')
@@ -138,56 +176,9 @@ watch = bucky.stopwatch('some.prefix.if.you.want')
 You can then call `watch.mark('key')` to send the time since the stopwatch started, or
 `watch.split('key')` to send the time since the last split.
 
-It acts like a timer where the start is always navigation start.
-
-#### Sending Page Performance
-
-Chrome logs a bunch of page performance data, bucky includes a method for writing all of this in
-one go.  It won't do anything on browsers which don't support the performance.timing api.  You should
-call it after document.load.
-
-```coffeescript
-bucky.sendPerformanceData()
-```
-
-The two most relevant stats provided are `responseEnd` which is the amount of time it took for the
-original page to be loaded and `domInteractive` which is the amount of time before the page has
-finished loaded and can be interacted with by the user.
-
-As a reminder: this data is browser specific, so it will likely skew lower than what users on
-old browsers see.
-
-If you're using Backbone, it might be a good idea to send your data based on route:
-
-```coffeescript
-Backbone.history.on 'route', (router, route) ->
-   # Will only send on the initial page load:
-   myBucky.sendPerformanceData("page.#{ route }")
-```
-
-#### Sending AJAX Request Time
-
-Bucky can automatically log all ajax requests made by hooking into jQuery.ajax and doing some transformations
-on the url to try and create a graphite key from it.  Enable it as early in your app's load as is possible:
-
-```coffeescript
-bucky.requests.monitor('my.project.ENV.requests')
-```
-
 ### Your Stats
 
 You can find your stats in the `stats` and `stats.timing` folders in graphite, or as written in OpenTSDB.
-
-### Standard Locations
-
-Recommended locations for your stats:
-
-##### Performance Data
-`<team>.<app>.ENV.page.<page name>`
-example: `contacts.web.ENV.page.contactDetail`
-
-#### Ajax Monitoring
-`<team>.<app>.ENV.requests`
 
 ### Send Frequency
 
