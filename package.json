@@ -1,6 +1,6 @@
 {
   "name": "bucky",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "description": "Client to communicate graphite stats to our Bucky server then to Graphite",
   "main": "static/coffee/client.coffee",
   "dependencies": {
