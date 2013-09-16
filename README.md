@@ -239,11 +239,9 @@ The Bucky object provides a couple extra properties you can access:
 with the goal of removing anything which will vary per-request, so you end up with stats per-endpoint.  These
 tranformations include:
 
-- Stripping GUIDS, IDS, SHA1s, MD5s
+- Stripping GUIDS, IDs, SHA1s, MD5s
 - Stripping email addresses
 - Stripping domains
-- Stripping .com and www.
-- Replacing slashes and spaces with '.'
 
 If you find these tranformations too invasive, or not invasive enough, you can modify them.
 
