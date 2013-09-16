@@ -248,19 +248,19 @@ tranformations include:
 If you find these tranformations too invasive, or not invasive enough, you can modify them.
 
 ```javascript
-# You can diable tranforms with `.disable`
+// You can diable tranforms with `.disable`
 Bucky.requests.transforms.disable('guid');
 
-# You can enable transforms with `.enable`
+// You can enable transforms with `.enable`
 Bucky.requests.tranforms.enable('guid');
 
-# `.enable` can also be used to add a new tranform:
+// `.enable` can also be used to add a new tranform:
 Bucky.requests.transforms.enable('my-ids', /[0-9]{4}-[0-9]{12}/g)
 
-# The third argument defines what the match is replaced with (rather than just eliminating it):
+// The third argument defines what the match is replaced with (rather than just eliminating it):
 Bucky.requests.transforms.enable('campaign', /campaigns\/\w{15}/ig, '/campaigns')
 
-# You can also just provide a function which takes in the url, and returns it modified:
+// You can also just provide a function which takes in the url, and returns it modified:
 Bucky.request.transforms.enable('soup', function(url){ return url.split('').reverse().join(''); })
 ```
 
