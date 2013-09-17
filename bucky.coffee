@@ -50,14 +50,13 @@ exportDef = ->
     # times?
     decimalPrecision: 3
 
-    # Bucky can automatically report a datapoint of what it's response time
+    # Bucky can automatically report a datapoint of what its response time
     # is.  This is useful because Bucky returns almost immediately, making
     # it's response time a good measure of the user's connection latency.
     sendLatency: false
 
     # Downsampling will cause Bucky to only send data 100*SAMPLE percent
-    # of the time.  It is used to reduce the amount of data sent to the backend.  Keep
-    # in mind that the goal is to have each datapoint sent at least once per minute.
+    # of the time.  It is used to reduce the amount of data sent to the backend.
     #
     # It's not done per datapoint, but per client, so you probably don't want to downsample
     # on node (you would be telling a percentage of your servers to not send data).
@@ -136,6 +135,49 @@ exportDef = ->
     unless maxTimeout?
       maxTimeout = setTimeout flush, options.maxInterval
 
+  makeRequest = (data) ->
+    corsSupport = window.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest())
+
+    match = /(?:(https?:\/\/)|(?:\/))?([^\/])/.exec options.host
+
+    if match?[1]
+      # FQDN
+
+      origin = match[1] + match[2]
+      if origin is "#{ document.location.protocol }//#{ document.location.host }"
+        sameOrigin = true
+      else
+        sameOrigin = false
+    else
+      # Relative URL
+      
+      sameOrigin = true
+
+    sendStart = now()
+  
+    body = JSON.stringify data
+
+    if not sameOrigin and not corsSupport and window.XDomainRequest?
+      # CORS support for IE9
+      req = new XDomainRequest
+
+      # Required for XDomainRequest, as application/json is not supported
+      req.setRequestHeader 'Content-Type', 'text/plain'
+    else
+      req = new _XMLHttpRequest
+
+      req.setRequestHeader 'Content-Type', 'application/json'
+
+    req.open 'POST', "#{ options.host }/send", true
+
+    req.addEventListener 'load', ->
+      updateLatency(now() - sendStart)
+    , false
+
+    req.send body
+
+    req
+
   sendQueue = ->
     if not ACTIVE
       log "Would send bucky queue"
@@ -162,21 +204,7 @@ exportDef = ->
       if point.count isnt 1
         out[key] += "@#{ round(1 / point.count, 5) }"
 
-    sendStart = now()
-  
-    body = JSON.stringify out
-
-    request = new _XMLHttpRequest
-    request.open 'POST', "#{ options.host }/send", true
-
-    request.setRequestHeader 'Content-Type', 'application/json'
-    request.setRequestHeader 'Content-Length', body.length
-
-    request.addEventListener 'load', ->
-      updateLatency(now() - sendStart)
-    , false
-
-    request.send body
+    makeRequest out
 
     queue = {}
 
