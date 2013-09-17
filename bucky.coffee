@@ -138,12 +138,12 @@ exportDef = ->
   makeRequest = (data) ->
     corsSupport = window.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest())
 
-    match = /(?:(https?:\/\/)|(?:\/))?([^\/])/.exec options.host
+    match = /^(https?:\/\/[^\/]+)/i.exec options.host
 
-    if match?[1]
+    if match
       # FQDN
 
-      origin = match[1] + match[2]
+      origin = match[1]
       if origin is "#{ document.location.protocol }//#{ document.location.host }"
         sameOrigin = true
       else
