@@ -536,6 +536,7 @@ exportDef = ->
       sendPerformanceData,
       flush,
       setOptions,
+      options,
       history: HISTORY,
       active: ACTIVE,
       enableAjaxMonitoring: ->

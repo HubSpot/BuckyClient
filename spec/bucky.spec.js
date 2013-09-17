@@ -25,6 +25,15 @@
     });
   });
 
+  describe('setOptions', function() {
+    return it('should set options', function() {
+      Bucky.setOptions({
+        host: '/test'
+      });
+      return expect(Bucky.options.host).toBe('/test');
+    });
+  });
+
   describe('getFullUrl', function() {
     return it('should add the hostname if the url starts with slash', function() {
       return expect(Bucky.requests.getFullUrl('/test', {
@@ -96,10 +105,7 @@
     server = null;
     beforeEach(function() {
       server = sinon.fakeServer.create();
-      server.autoRespond = true;
-      return Bucky.setOptions({
-        host: 'http://www.google.com'
-      });
+      return server.autoRespond = true;
     });
     afterEach(function() {
       return server.restore();

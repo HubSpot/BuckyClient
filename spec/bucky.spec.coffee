@@ -20,6 +20,13 @@ describe 'A Bucky Client', ->
   it 'should have a send method', ->
     expect(client.send).toBeDefined()
 
+describe 'setOptions', ->
+  it 'should set options', ->
+    Bucky.setOptions
+      host: '/test'
+
+    expect(Bucky.options.host).toBe('/test')
+
 describe 'getFullUrl', ->
   it 'should add the hostname if the url starts with slash', ->
     expect(Bucky.requests.getFullUrl('/test', {hostname: 'host'})).toBe('host/test')
@@ -86,9 +93,6 @@ describe 'send', ->
   beforeEach ->
     server = sinon.fakeServer.create()
     server.autoRespond = true
-
-    Bucky.setOptions
-      host: 'http://www.google.com'
 
   afterEach ->
     server.restore()

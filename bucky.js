@@ -570,6 +570,7 @@
         sendPerformanceData: sendPerformanceData,
         flush: flush,
         setOptions: setOptions,
+        options: options,
         history: HISTORY,
         active: ACTIVE,
         enableAjaxMonitoring: function() {
