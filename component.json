@@ -1,0 +1,17 @@
+{
+  "name": "bucky",
+  "repo": "HubSpot/bucky",
+  "description": "Collect performance data from the client",
+  "version": "0.2.0",
+  "homepage": "http://github.hubspot.com/BuckyClient",
+  "license": "MIT",
+  "keywords": [
+    "client-side",
+    "statistics",
+    "data",
+    "graphite"
+  ],
+  "scripts": [
+    "bucky.js"
+  ]
+}
