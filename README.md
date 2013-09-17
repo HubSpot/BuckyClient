@@ -27,6 +27,8 @@ The `Bucky` object will be available globally.
 
 Bucky can also be loaded with AMD or Browserify.
 
+Here is [an example](http://github.hubspot.com/BuckyClient/quickstart) of what you should do as early in the loading process as is possible.
+
 #### From Node
 
 ```bash
