@@ -1,7 +1,7 @@
 {
   "name": "bucky",
   "version": "0.2.0",
-  "description": "Client to communicate graphite stats to our Bucky server then to Graphite",
+  "description": "Get performance data from the client",
   "main": "static/coffee/client.coffee",
   "dependencies": {
     "underscore": "~1.4.4",
