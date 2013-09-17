@@ -1,5 +1,5 @@
 (function() {
-  var exportDef, extend, initTime, log, now, _XMLHttpRequest,
+  var exportDef, extend, initTime, log, now,
     __slice = [].slice;
 
   if ((typeof process !== "undefined" && process !== null ? process.hrtime : void 0) != null) {
@@ -16,8 +16,6 @@
   }
 
   initTime = +(new Date);
-
-  _XMLHttpRequest = window.XMLHttpRequest;
 
   extend = function() {
     var a, key, obj, objs, val, _i, _len, _ref;
@@ -125,7 +123,7 @@
     };
     makeRequest = function(data) {
       var body, corsSupport, match, origin, req, sameOrigin, sendStart;
-      corsSupport = window._XMLHttpRequest && (_XMLHttpRequest.defake || 'withCredentials' in new _XMLHttpRequest());
+      corsSupport = window.XMLHttpRequest && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest());
       match = /^(https?:\/\/[^\/]+)/i.exec(options.host);
       if (match) {
         origin = match[1];
@@ -141,12 +139,18 @@
       body = JSON.stringify(data);
       if (!sameOrigin && !corsSupport && (window.XDomainRequest != null)) {
         req = new XDomainRequest;
+      } else {
+        req = new XMLHttpRequest;
+      }
+      req.bucky = {
+        track: false
+      };
+      req.open('POST', "" + options.host + "/send", true);
+      if ((window.XDomainRequest != null) && req instanceof XDomainRequest) {
         req.setRequestHeader('Content-Type', 'text/plain');
       } else {
-        req = new _XMLHttpRequest;
         req.setRequestHeader('Content-Type', 'application/json');
       }
-      req.open('POST', "" + options.host + "/send", true);
       req.addEventListener('load', function() {
         return updateLatency(now() - sendStart);
       }, false);
@@ -197,14 +201,15 @@
       }
     };
     makeClient = function(prefix) {
-      var buildPath, count, exports, key, nextMakeClient, requests, send, sendPerformanceData, sentPerformanceData, timer, val, _results;
+      var buildPath, count, exports, key, nextMakeClient, requests, send, sendPerformanceData, sentPerformanceData, timer, val;
       if (prefix == null) {
         prefix = '';
       }
       buildPath = function(path) {
         if (prefix != null ? prefix.length : void 0) {
-          return path = prefix + '.' + path;
+          prefix + '.' + path;
         }
+        return path;
       };
       send = function(path, value, type) {
         if (type == null) {
@@ -361,7 +366,7 @@
         return true;
       };
       requests = {
-        tranforms: {
+        transforms: {
           mapping: {
             guid: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig,
             sha1: /\/[0-9a-f]{40}/ig,
@@ -425,10 +430,10 @@
           parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url);
           host = parsedUrl[1];
           path = (_ref = parsedUrl[2]) != null ? _ref : '';
-          _ref1 = this.transforms.enabled;
+          _ref1 = requests.transforms.enabled;
           for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
             mappingName = _ref1[_i];
-            mapping = this.transforms.mapping[mappingName];
+            mapping = requests.transforms.mapping[mappingName];
             if (mapping == null) {
               log.error("Bucky Error: Attempted to enable a mapping which is not defined: " + mappingName);
               continue;
@@ -437,7 +442,7 @@
               path = mapping(path, url, type, root);
               continue;
             }
-            if (typeof mapping === 'string') {
+            if (mapping instanceof RegExp) {
               mapping = [mapping, ''];
             }
             path = path.replace(mapping[0], mapping[1]);
@@ -470,7 +475,7 @@
           }
         },
         monitor: function(root) {
-          var done, self;
+          var done, self, _XMLHttpRequest;
           if (root == null) {
             root = 'requests';
           }
@@ -496,6 +501,7 @@
               return count("" + stat + "." + request.status);
             }
           };
+          _XMLHttpRequest = window.XMLHttpRequest;
           return window.XMLHttpRequest = function() {
             var e, readyStateTimes, req, startTime, _open, _send;
             req = new _XMLHttpRequest;
@@ -511,14 +517,16 @@
                     return readyStateTimes[req.readyState] = now();
                   }, false);
                   req.addEventListener('loadend', function(event) {
-                    return done({
-                      type: type,
-                      url: url,
-                      event: event,
-                      startTime: startTime,
-                      readyStateTimes: readyStateTimes,
-                      request: req
-                    });
+                    if ((req.bucky == null) || req.bucky.track !== false) {
+                      return done({
+                        type: type,
+                        url: url,
+                        event: event,
+                        startTime: startTime,
+                        readyStateTimes: readyStateTimes,
+                        request: req
+                      });
+                    }
                   }, false);
                 } catch (_error) {
                   e = _error;
@@ -568,12 +576,11 @@
           return requests.monitor.apply(requests, arguments);
         }
       };
-      _results = [];
       for (key in exports) {
         val = exports[key];
-        _results.push(nextMakeClient[key] = val);
+        nextMakeClient[key] = val;
       }
-      return _results;
+      return nextMakeClient;
     };
     return makeClient();
   };

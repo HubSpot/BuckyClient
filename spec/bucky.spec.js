@@ -55,10 +55,6 @@
       expect(utk('/test/abc#page')).toBe('test.abc');
       return expect(utk('http://app.hubspot.com/analyze/landing-pages/#range=custom&frequency=weekly&start=03&end=06events')).toBe('app.hubspot.analyze.landing-pages');
     });
-    it('should strip events', function() {
-      expect(utk('contacts/53/ajax/event/000000003176')).toBe('contacts.ajax.events');
-      return expect(utk('contacts/53/ajax/events/9pgMAm3nY6sh/test')).toBe('contacts.ajax.events.test');
-    });
     it('should strip ids', function() {
       expect(utk('test/33/test/3423421')).toBe('test.test');
       expect(utk('a/b/432;234;232334;23;23/c')).toBe('a.b.c');
@@ -71,17 +67,11 @@
     it('should add the passed in root', function() {
       return expect(utk('test/as', null, 'root')).toBe('root.test.as');
     });
-    it('should strip secure ids', function() {
-      return expect(utk('https://app.hubspot.com/contacts/53/lists/ajax/contact/_AO_T-mNtu9TBKIkc1lTfjBFOMBYFx1B4TzhLV6gYdIpsP-AUbHrAzFUQ7-M5bkRdvdYHQ5ro9LqVxmc4nzeNZ7D2V0aqoaQXCg/detail?includeHistory=true&includeEmailSubscriptions=true&includePublicUrl=true')).toBe('app.hubspot.contacts.lists.ajax.contact.detail');
-    });
     it('should strip email addresses', function() {
       return expect(utk('test/page/zack@comnet.org/me')).toBe('test.page.me');
     });
     it('should strip domain names in the path', function() {
       return expect(utk('test/page/hubspot.com/me')).toBe('test.page.me');
-    });
-    it('should strip static versions in the path', function() {
-      return expect(utk('example.com/test/static-1.343/other')).toBe('example.test.static.other');
     });
     it('should strip port numbers in the host', function() {
       return expect(utk('http://www.awesome.com:1337/test/page')).toBe('awesome.test.page');
@@ -96,11 +86,8 @@
     it('should decode uri entities', function() {
       return expect(utk('test/it%20expect/it/to/work')).toBe('test.it.expect.it.to.work');
     });
-    it('should convert colons to underscores', function() {
+    return it('should convert colons to underscores', function() {
       return expect(utk('test/path:with:colons/yea')).toBe('test.path_with_colons.yea');
-    });
-    return it('should strip .js extensions', function() {
-      return expect(utk('test/path/ending/in/something.js')).toBe('test.path.ending.in.something');
     });
   });
 
@@ -110,7 +97,9 @@
     beforeEach(function() {
       server = sinon.fakeServer.create();
       server.autoRespond = true;
-      return window.BUCKY_DEPLOYED = true;
+      return Bucky.setOptions({
+        host: 'http://www.google.com'
+      });
     });
     afterEach(function() {
       return server.restore();

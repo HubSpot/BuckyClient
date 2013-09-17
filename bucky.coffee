@@ -13,9 +13,6 @@ else
 # window.performance
 initTime = +new Date
 
-# We grab a reference to it now before we mutate it
-_XMLHttpRequest = window.XMLHttpRequest
-
 extend = (a, objs...) ->
   for obj in objs.reverse()
     for key, val of obj
@@ -136,7 +133,7 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = window._XMLHttpRequest and (_XMLHttpRequest.defake or 'withCredentials' of new _XMLHttpRequest())
+    corsSupport = window.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest())
 
     match = /^(https?:\/\/[^\/]+)/i.exec options.host
 
@@ -160,15 +157,21 @@ exportDef = ->
     if not sameOrigin and not corsSupport and window.XDomainRequest?
       # CORS support for IE9
       req = new XDomainRequest
+    else
+      req = new XMLHttpRequest
 
+    # Don't track this request with Bucky, as we'd be tracking our own
+    # sends forever.  The latency of this request is independently tracked
+    # with updateLatency.
+    req.bucky = {track: false}
+
+    req.open 'POST', "#{ options.host }/send", true
+
+    if window.XDomainRequest? and req instanceof XDomainRequest
       # Required for XDomainRequest, as application/json is not supported
       req.setRequestHeader 'Content-Type', 'text/plain'
     else
-      req = new _XMLHttpRequest
-
       req.setRequestHeader 'Content-Type', 'application/json'
-
-    req.open 'POST', "#{ options.host }/send", true
 
     req.addEventListener 'load', ->
       updateLatency(now() - sendStart)
@@ -227,7 +230,8 @@ exportDef = ->
   makeClient = (prefix='') ->
     buildPath = (path) ->
       if prefix?.length
-        path = prefix + '.' + path
+        prefix + '.' + path
+      path
 
     send = (path, value, type='gauge') ->
       enqueue buildPath(path), value, type
@@ -357,7 +361,7 @@ exportDef = ->
       return true
 
     requests = {
-      tranforms:
+      transforms:
         mapping:
           guid: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig
           sha1: /\/[0-9a-f]{40}/ig
@@ -407,8 +411,8 @@ exportDef = ->
         host = parsedUrl[1]
         path = parsedUrl[2] ? ''
 
-        for mappingName in @transforms.enabled
-          mapping = @transforms.mapping[mappingName]
+        for mappingName in requests.transforms.enabled
+          mapping = requests.transforms.mapping[mappingName]
 
           if not mapping?
             log.error "Bucky Error: Attempted to enable a mapping which is not defined: #{ mappingName }"
@@ -418,7 +422,7 @@ exportDef = ->
             path = mapping path, url, type, root
             continue
 
-          if typeof mapping is 'string'
+          if mapping instanceof RegExp
             mapping = [mapping, '']
     
           path = path.replace(mapping[0], mapping[1])
@@ -479,6 +483,7 @@ exportDef = ->
 
             count("#{ stat }.#{ request.status }")
 
+        _XMLHttpRequest = window.XMLHttpRequest
         window.XMLHttpRequest = ->
           req = new _XMLHttpRequest
 
@@ -496,7 +501,8 @@ exportDef = ->
                 , false
 
                 req.addEventListener 'loadend', (event) ->
-                  done {type, url, event, startTime, readyStateTimes, request: req}
+                  if not req.bucky? or req.bucky.track isnt false
+                    done {type, url, event, startTime, readyStateTimes, request: req}
                 , false
               catch e
                 log.error "Bucky error monitoring XHR open call", e
@@ -538,6 +544,8 @@ exportDef = ->
 
     for key, val of exports
       nextMakeClient[key] = val
+
+    nextMakeClient
 
   makeClient()
 

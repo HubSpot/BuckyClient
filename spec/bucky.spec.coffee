@@ -46,10 +46,6 @@ describe 'urlToKey', ->
     expect(utk('/test/abc#page')).toBe('test.abc')
     expect(utk('http://app.hubspot.com/analyze/landing-pages/#range=custom&frequency=weekly&start=03&end=06events')).toBe('app.hubspot.analyze.landing-pages')
 
-  it 'should strip events', ->
-    expect(utk('contacts/53/ajax/event/000000003176')).toBe('contacts.ajax.events')
-    expect(utk('contacts/53/ajax/events/9pgMAm3nY6sh/test')).toBe('contacts.ajax.events.test')
-
   it 'should strip ids', ->
     expect(utk('test/33/test/3423421')).toBe('test.test')
     expect(utk('a/b/432;234;232334;23;23/c')).toBe('a.b.c')
@@ -62,17 +58,11 @@ describe 'urlToKey', ->
   it 'should add the passed in root', ->
     expect(utk('test/as', null, 'root')).toBe('root.test.as')
 
-  it 'should strip secure ids', ->
-    expect(utk('https://app.hubspot.com/contacts/53/lists/ajax/contact/_AO_T-mNtu9TBKIkc1lTfjBFOMBYFx1B4TzhLV6gYdIpsP-AUbHrAzFUQ7-M5bkRdvdYHQ5ro9LqVxmc4nzeNZ7D2V0aqoaQXCg/detail?includeHistory=true&includeEmailSubscriptions=true&includePublicUrl=true')).toBe('app.hubspot.contacts.lists.ajax.contact.detail')
-
   it 'should strip email addresses', ->
     expect(utk('test/page/zack@comnet.org/me')).toBe('test.page.me')
 
   it 'should strip domain names in the path', ->
     expect(utk('test/page/hubspot.com/me')).toBe('test.page.me')
-
-  it 'should strip static versions in the path', ->
-    expect(utk('example.com/test/static-1.343/other')).toBe('example.test.static.other')
 
   it 'should strip port numbers in the host', ->
     expect(utk('http://www.awesome.com:1337/test/page')).toBe('awesome.test.page')
@@ -90,9 +80,6 @@ describe 'urlToKey', ->
   it 'should convert colons to underscores', ->
     expect(utk('test/path:with:colons/yea')).toBe('test.path_with_colons.yea')
 
-  it 'should strip .js extensions', ->
-    expect(utk('test/path/ending/in/something.js')).toBe('test.path.ending.in.something')
-
 describe 'send', ->
   server = null
 
@@ -100,7 +87,8 @@ describe 'send', ->
     server = sinon.fakeServer.create()
     server.autoRespond = true
 
-    window.BUCKY_DEPLOYED = true
+    Bucky.setOptions
+      host: 'http://www.google.com'
 
   afterEach ->
     server.restore()

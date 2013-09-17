@@ -27,7 +27,8 @@ module.exports = (grunt) ->
         'spec/vendor/jquery-1.10.2/jquery.js',
         'spec/vendor/underscore-1.5.2/underscore.js',
         'spec/vendor/backbone-1.0.0/backbone.js',
-        'mixen.js'
+        'spec/vendor/sinon-1.7.3/sinon.js',
+        'bucky.js'
       ]
 
   grunt.loadNpmTasks 'grunt-contrib-watch'
