@@ -1,7 +1,7 @@
 Bucky
 =====
 
-Bucky is a client and server for sending stats from the client and node into statsd+graphite, OpenTSDB, or any
+Bucky is a client and server for sending performance data from the client into statsd+graphite, OpenTSDB, or any
 other stats aggregator of your choice.
 
 It can automatically measure how long your pages take to load, how long AJAX requests take and how long
@@ -64,7 +64,7 @@ full list of options.
 #### Sending Page Performance
 
 Modern browsers log a bunch of page performance data, bucky includes a method for writing all of this in
-one go.  It won't do anything on browsers which don't support the performance.timing api.  Call it whenver,
+one go.  It won't do anything on browsers which don't support the performance.timing api.  Call it whenever,
 it will bind an event if the data isn't ready yet.
 
 ```coffeescript
@@ -86,6 +86,28 @@ Backbone.history.on 'route', (router, route) ->
    Bucky.sendPerformanceData("some.location.page.#{ route }")
 ```
 
+The data collected will look something like this:
+
+```javascript
+pages.contactDetail.timing.connectEnd: "172.000|ms"
+pages.contactDetail.timing.connectStart: "106.000|ms"
+pages.contactDetail.timing.domComplete: "1029.000|ms"
+pages.contactDetail.timing.domContentLoadedEventEnd: "1019.000|ms"
+pages.contactDetail.timing.domContentLoadedEventStart: "980.000|ms"
+pages.contactDetail.timing.domInteractive: "980.000|ms"
+pages.contactDetail.timing.domLoading: "254.000|ms"
+pages.contactDetail.timing.domainLookupEnd: "106.000|ms"
+pages.contactDetail.timing.domainLookupStart: "106.000|ms"
+pages.contactDetail.timing.fetchStart: "103.000|ms"
+pages.contactDetail.timing.loadEventEnd: "1030.000|ms"
+pages.contactDetail.timing.loadEventStart: "1029.000|ms"
+pages.contactDetail.timing.navigationStart: "0.000|ms"
+pages.contactDetail.timing.requestStart: "173.000|ms"
+pages.contactDetail.timing.responseEnd: "243.000|ms"
+pages.contactDetail.timing.responseStart: "235.000|ms"
+pages.contactDetail.timing.secureConnectionStart: "106.000|ms"
+```
+
 #### Sending AJAX Request Time
 
 Bucky can automatically log all ajax requests made by hooking into XMLHttpRequest and doing some transformations
@@ -93,6 +115,18 @@ on the url to try and create a graphite key from it.  Enable it as early in your
 
 ```coffeescript
 Bucky.requests.monitor('my.project.requests')
+```
+
+The data collected will look something like this:
+
+```javascript
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get: "656.794|ms"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.2xx: "1|c"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.200: "1|c"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.headers: "436.737|ms"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.receiving: "0.182|ms"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.sending: "0.059|ms"
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.waiting: "206.035|ms"
 ```
 
 #### Prefixing
@@ -116,9 +150,6 @@ cwBucky.send('x', 1) # Data goes in contacts.web.x
 ```
 
 #### Counting Things
-
-Bucky includes a js client which can be used both on the client and in Node.  It will automatically
-enqueue your messages and send them in bulk periodically.
 
 By default `send` sends absolute values, this is rarely what you want when working from the client, incrementing
 a counter is usually more helpful:
