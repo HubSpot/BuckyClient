@@ -310,3 +310,5 @@ an idea of what sort of data points are being created.
 This project pushes data to the Bucky Server.
 
 [Server Documentation](http://github.com/HubSpot/BuckyServer)
+
+<script src="http://github.hubspot.com/BuckyClient/bucky.js"></script>
