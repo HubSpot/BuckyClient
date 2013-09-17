@@ -9,7 +9,8 @@ various functions take to run.  Most importantly, it's taking the measurements o
 so the data has the potential to be much more valuable than in vitro measurements.
 
 If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you're not
-collecting stats, you should start!  What gets measured gets managed.
+collecting stats, you [should start](https://github.com/HubSpot/BuckyServer/blob/master/docs/start-no-stats.md)!
+What gets measured gets managed.
 
 ### Server
 
@@ -48,7 +49,7 @@ Bucky.setOptions({
 
 Some options you might be interested in:
 
-- `host`: Where we can reach your [http://github.com/HubSpot/BuckyServer](Bucky server), including the
+- `host`: Where we can reach your [Bucky server](http://github.com/HubSpot/BuckyServer), including the
   APP_ROOT.
 
   The Bucky server has a very liberal CORS config, so we should be able to connect to it even if
