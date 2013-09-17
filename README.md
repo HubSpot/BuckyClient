@@ -118,7 +118,8 @@ on the url to try and create a graphite key from it.  Enable it as early in your
 Bucky.requests.monitor('my.project.requests')
 ```
 
-The data collected will look something like this:
+The data collected will look something like this for a GET request to
+`api.hubapi.com/automation/v2/workflows`:
 
 ```javascript
 contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get: "656.794|ms"
