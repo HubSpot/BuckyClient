@@ -136,7 +136,7 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = window.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest())
+    corsSupport = window._XMLHttpRequest and (_XMLHttpRequest.defake or 'withCredentials' of new _XMLHttpRequest())
 
     match = /^(https?:\/\/[^\/]+)/i.exec options.host
 
