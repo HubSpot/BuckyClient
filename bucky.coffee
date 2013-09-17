@@ -503,11 +503,11 @@ exportDef = ->
 
               _open.apply req, arguments
 
-            _start = req.start
-            req.start = ->
+            _send = req.send
+            req.send = ->
               startTime = now()
 
-              _start.apply req, arguments
+              _send.apply req, arguments
           catch e
             log.error "Bucky error monitoring XHR", e
 

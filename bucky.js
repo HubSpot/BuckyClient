@@ -50,7 +50,7 @@
   };
 
   exportDef = function() {
-    var ACTIVE, HISTORY, TYPE_MAP, considerSending, currentLatency, defaults, enqueue, flush, latencySent, makeClient, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, updateActive, updateLatency;
+    var ACTIVE, HISTORY, TYPE_MAP, considerSending, currentLatency, defaults, enqueue, flush, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, updateActive, updateLatency;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -70,10 +70,10 @@
     (updateActive = function() {
       return ACTIVE = options.active && Math.random() < options.sample;
     })();
-    HISTORY = {};
+    HISTORY = [];
     setOptions = function(opts) {
       extend(options, opts);
-      if ('sample' in opts) {
+      if ('sample' in opts || 'active' in opts) {
         updateActive();
       }
       return options;
@@ -100,7 +100,7 @@
           value = queue[path].value + (value - queue[path].value) / count;
         }
       }
-      HISTORY[path] = queue[path] = {
+      queue[path] = {
         value: value,
         type: type,
         count: count
@@ -123,8 +123,38 @@
         return maxTimeout = setTimeout(flush, options.maxInterval);
       }
     };
+    makeRequest = function(data) {
+      var body, corsSupport, match, origin, req, sameOrigin, sendStart;
+      corsSupport = window._XMLHttpRequest && (_XMLHttpRequest.defake || 'withCredentials' in new _XMLHttpRequest());
+      match = /^(https?:\/\/[^\/]+)/i.exec(options.host);
+      if (match) {
+        origin = match[1];
+        if (origin === ("" + document.location.protocol + "//" + document.location.host)) {
+          sameOrigin = true;
+        } else {
+          sameOrigin = false;
+        }
+      } else {
+        sameOrigin = true;
+      }
+      sendStart = now();
+      body = JSON.stringify(data);
+      if (!sameOrigin && !corsSupport && (window.XDomainRequest != null)) {
+        req = new XDomainRequest;
+        req.setRequestHeader('Content-Type', 'text/plain');
+      } else {
+        req = new _XMLHttpRequest;
+        req.setRequestHeader('Content-Type', 'application/json');
+      }
+      req.open('POST', "" + options.host + "/send", true);
+      req.addEventListener('load', function() {
+        return updateLatency(now() - sendStart);
+      }, false);
+      req.send(body);
+      return req;
+    };
     sendQueue = function() {
-      var body, key, out, point, request, sendStart, value, _ref;
+      var key, out, point, value, _ref;
       if (!ACTIVE) {
         log("Would send bucky queue");
         return;
@@ -132,6 +162,12 @@
       out = {};
       for (key in queue) {
         point = queue[key];
+        HISTORY.push({
+          path: key,
+          count: point.count,
+          type: point.type,
+          value: point.value
+        });
         if (TYPE_MAP[point.type] == null) {
           log.error("Type " + point.type + " not understood by Bucky");
           continue;
@@ -145,23 +181,9 @@
           out[key] += "@" + (round(1 / point.count, 5));
         }
       }
-      sendStart = now();
-      body = JSON.stringify(out);
-      request = new _XMLHttpRequest;
-      request.open('POST', "" + options.host + "/send", true);
-      request.setRequestHeader('Content-Type', 'application/json');
-      request.setRequestHeader('Content-Length', body.length);
-      request.addEventListener('load', function() {
-        return updateLatency(now() - sendStart);
-      }, false);
-      request.send(body);
+      makeRequest(out);
       return queue = {};
     };
-    ({
-      getHistory: function() {
-        return HISTORY;
-      }
-    });
     currentLatency = 0;
     latencySent = false;
     updateLatency = function(time) {
@@ -475,7 +497,7 @@
             }
           };
           return window.XMLHttpRequest = function() {
-            var e, readyStateTimes, req, startTime, _open, _start;
+            var e, readyStateTimes, req, startTime, _open, _send;
             req = new _XMLHttpRequest;
             try {
               startTime = null;
@@ -504,10 +526,10 @@
                 }
                 return _open.apply(req, arguments);
               };
-              _start = req.start;
-              req.start = function() {
+              _send = req.send;
+              req.send = function() {
                 startTime = now();
-                return _start.apply(req, arguments);
+                return _send.apply(req, arguments);
               };
             } catch (_error) {
               e = _error;
