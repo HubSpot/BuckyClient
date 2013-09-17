@@ -1,0 +1,225 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="chrome=1"><meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"><title>Bucky Client</title><link rel="icon" href="http://static.hubspot.com/favicon.ico"><link rel="stylesheet" href="https://static2cdn.hubspot.com/hubspot_public_assets/static-1.112/shared/sass/hubspot_public_assets.css"><link rel="stylesheet" href="https://static.hubspot.com/bundles/navigation.css"><link rel="stylesheet" href="/static-resources/css/print.css"><link rel="stylesheet" href="/static-resources/css/highlight-theme-github.css"><link rel="stylesheet" href="/static-resources/css/navigation-tweaks.css"><link rel="stylesheet" href="/static-resources/css/documentation.css"><script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script><link rel="stylesheet" href="/BuckyClient//resources/executr/lib/CodeMirror/codemirror.css"><link rel="stylesheet" href="/BuckyClient//resources/executr/build/css/executr.css"><script src="/BuckyClient//resources/executr/lib/CodeMirror/codemirror.js"></script><script src="/BuckyClient//resources/executr/lib/CodeMirror/mode/coffeescript/coffeescript.js"></script><script src="/BuckyClient//resources/executr/lib/CodeMirror/mode/javascript/javascript.js"></script><script src="/BuckyClient//resources/executr/lib/coffee-script.js"></script><script src="/BuckyClient//resources/executr/lib/underscore.min.js"></script><script src="/BuckyClient//resources/executr/lib/js2coffee.min.js"></script><script src="/BuckyClient//resources/executr/build/js/executr.js"></script><script src="/BuckyClient//resources/executr/build/js/executr-run.js"></script><script src="//use.typekit.net/jbn8qxr.js"></script><script>try{Typekit.load();}catch(e){}
+</script></head><body><div id="hs-nav-v3" class="nav-width-flex signed-out-nav">
+    <div class="hs-nav-section main-nav">
+        <div class="nav-section-inner">
+            <ul class="nav-links-left">
+                <li class="first"><a class="nav-logo" href="http://www.hubspot.com/"><img height="34" src="https://static.hubspot.com/style-guide/img/nav-sprocket.png" width="29"></a></li>
+                <li>
+                    <a href="http://dev.hubspot.com">
+                        HubSpot Dev &amp; Design
+                    </a>
+                </li>
+                <li>
+                    <a href="http://hubspot.github.com">
+                        Open Source
+                    </a>
+                </li>
+            </ul>
+            <ul class="nav-links-right">
+                <li class="first">
+                    <a href="http://dev.hubspot.com/jobs/" class="sign-in">You should work at HubSpot</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="hs-doc-marquee"><div class="hs-page-width-normal"><div class="row-fluid"><div class="span6"><h1>Bucky Client</h1><h3 class="hs-doc-marquee-description">Get performance data from the client</h3><p class="hs-doc-marquee-release">0.2.0</p><p class="hs-doc-marquee-stars"><iframe src="http://ghbtns.com/github-btn.html?user=HubSpot&repo=BuckyClient&type=watch&count=true&size=large" allowtransparency="true" frameborder="0" scrolling="0" width="240" height="30"></iframe></p></div><div class="span6"><div class="hs-doc-marquee-buttons"><a class="hs-doc-marquee-button" href="http://github.com/HubSpot/BuckyClient">Fork on GitHub</a><a class="hs-doc-marquee-button" href="http://github.com/HubSpot/BuckyClient/archive/v0.2.0.zip">Download ZIP (v0.2.0)</a></div></div></div></div></div><div class="hs-page-width-normal"><div class="row-fluid"><div class="span3"><div class="hs-doc-sidenav"><nav><ul class="hs-public-sidenav"><li class=""><a href="">Home</a></li></ul></nav></div></div><div class="span9"><div class="hs-doc-content"><h1>Bucky</h1>
+<p>Bucky is a client and server for sending performance data from the client into statsd+graphite, OpenTSDB, or any
+other stats aggregator of your choice.</p>
+<p>It can automatically measure how long your pages take to load, how long AJAX requests take and how long
+various functions take to run.  Most importantly, it&#39;s taking the measurements on actual page loads,
+so the data has the potential to be much more valuable than in vitro measurements.</p>
+<p>If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you&#39;re not
+collecting stats, you <a href="https://github.com/HubSpot/BuckyServer/blob/master/docs/start-no-stats.md">should start</a>!
+What gets measured gets managed.</p>
+<h3>Server</h3>
+<p>You can play with Bucky just using the client, but if you&#39;d like to start collecting data, see the
+<a href="http://github.com/HubSpot/BuckyServer">Server Instructions</a>.</p>
+<h3>Setup</h3>
+<h4>From The Client</h4>
+<p>Include <code>BuckyClient/bucky.js</code> file on your page</p>
+<p>The <code>Bucky</code> object will be available globally.</p>
+<p>Bucky can also be loaded with AMD or Browserify.</p>
+<p>Here is <a href="http://github.hubspot.com/BuckyClient/quickstart">an example</a> of what you should do as early in the loading process as is possible.</p>
+<h4>From Node</h4>
+<pre><code class="lang-bash">npm install bucky</code></pre>
+<pre><code class="lang-coffeescript">bucky = require(<span class="string">'bucky'</span>)</code></pre>
+<h3>Configuring</h3>
+<p>Before sending any data, call <code>setOptions</code>:</p>
+<pre><code class="lang-javascript">Bucky.setOptions({
+  host: <span class="string">'http://myweb.site:9999/bucky'</span>
+});</code></pre>
+<p>Some options you might be interested in:</p>
+<ul>
+<li><p><code>host</code>: Where we can reach your <a href="http://github.com/HubSpot/BuckyServer">Bucky server</a>, including the
+APP_ROOT.</p>
+<p>The Bucky server has a very liberal CORS config, so we should be able to connect to it even if
+it&#39;s on a different domain, but hosting it on the same domain and port will save you some preflight requests.</p>
+</li>
+<li><p><code>active</code>: Should Bucky actually send data?  Use this to disable Bucky during local dev for example.</p>
+</li>
+<li><code>sample</code>: What fraction of clients should actually send data?  Use to subsample your clients if you have
+too much data coming in.</li>
+</ul>
+<p>Take a look at <a href="http://github.com/HubSpot/BuckyClient/blob/master/bucky.coffee#L34">the source</a> for a
+full list of options.</p>
+<h4>Sending Page Performance</h4>
+<p>Modern browsers log a bunch of page performance data, bucky includes a method for writing all of this in
+one go.  It won&#39;t do anything on browsers which don&#39;t support the performance.timing api.  Call it whenever,
+it will bind an event if the data isn&#39;t ready yet.</p>
+<pre><code class="lang-coffeescript">Bucky.sendPerformanceData(<span class="string">'where.the.data.should.go'</span>)</code></pre>
+<p>The two most relevant stats provided are <code>responseEnd</code> which is the amount of time it took for the
+original page to be loaded and <code>domInteractive</code> which is the amount of time before the page has
+finished loaded and can be interacted with by the user.</p>
+<p>As a reminder: this data is browser specific, so it will likely skew lower than what users on
+old browsers see.</p>
+<p>If you&#39;re using Backbone, it might be a good idea to send your data based on route:</p>
+<pre><code class="lang-coffeescript">Backbone.history.<span class="literal">on</span> <span class="string">'route'</span>, (router, route) -&gt;
+   <span class="comment"># Will only send on the initial page load:</span>
+   Bucky.sendPerformanceData(<span class="string">"some.location.page.<span class="subst">#{ route }</span>"</span>)</code></pre>
+<p>The data collected will look something like this:</p>
+<pre><code class="lang-javascript">pages.contactDetail.timing.connectEnd: <span class="string">"172.000|ms"</span>
+pages.contactDetail.timing.connectStart: <span class="string">"106.000|ms"</span>
+pages.contactDetail.timing.domComplete: <span class="string">"1029.000|ms"</span>
+pages.contactDetail.timing.domContentLoadedEventEnd: <span class="string">"1019.000|ms"</span>
+pages.contactDetail.timing.domContentLoadedEventStart: <span class="string">"980.000|ms"</span>
+pages.contactDetail.timing.domInteractive: <span class="string">"980.000|ms"</span>
+pages.contactDetail.timing.domLoading: <span class="string">"254.000|ms"</span>
+pages.contactDetail.timing.domainLookupEnd: <span class="string">"106.000|ms"</span>
+pages.contactDetail.timing.domainLookupStart: <span class="string">"106.000|ms"</span>
+pages.contactDetail.timing.fetchStart: <span class="string">"103.000|ms"</span>
+pages.contactDetail.timing.loadEventEnd: <span class="string">"1030.000|ms"</span>
+pages.contactDetail.timing.loadEventStart: <span class="string">"1029.000|ms"</span>
+pages.contactDetail.timing.navigationStart: <span class="string">"0.000|ms"</span>
+pages.contactDetail.timing.requestStart: <span class="string">"173.000|ms"</span>
+pages.contactDetail.timing.responseEnd: <span class="string">"243.000|ms"</span>
+pages.contactDetail.timing.responseStart: <span class="string">"235.000|ms"</span>
+pages.contactDetail.timing.secureConnectionStart: <span class="string">"106.000|ms"</span></code></pre>
+<h4>Sending AJAX Request Time</h4>
+<p>Bucky can automatically log all ajax requests made by hooking into XMLHttpRequest and doing some transformations
+on the url to try and create a graphite key from it.  Enable it as early in your app&#39;s load as is possible:</p>
+<pre><code class="lang-coffeescript">Bucky.requests.monitor(<span class="string">'my.project.requests'</span>)</code></pre>
+<p>The data collected will look something like this for a GET request to
+<code>api.hubapi.com/automation/v2/workflows</code>:</p>
+<pre><code class="lang-javascript">contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get: <span class="string">"656.794|ms"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get<span class="number">.2</span>xx: <span class="string">"1|c"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get<span class="number">.200</span>: <span class="string">"1|c"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.headers: <span class="string">"436.737|ms"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.receiving: <span class="string">"0.182|ms"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.sending: <span class="string">"0.059|ms"</span>
+contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.waiting: <span class="string">"206.035|ms"</span></code></pre>
+<h4>Prefixing</h4>
+<p>You can build a client which will prefix all of your datapoints by calling bucky as a function:</p>
+<pre><code class="lang-coffeescript">myBucky = Bucky(<span class="string">'awesome.app.view'</span>)
+
+<span class="comment"># You can then use all of the normal methods:</span>
+myBucky.send(<span class="string">'data.point'</span>, <span class="number">5</span>)</code></pre>
+<p>You can repeatedly call clients to add more prefixes:</p>
+<pre><code class="lang-coffeescript">contactsBucky = bucky(<span class="string">'contacts'</span>)
+cwBucky = contactsBucky(<span class="string">'web'</span>)
+
+cwBucky.send(<span class="string">'x'</span>, <span class="number">1</span>) <span class="comment"># Data goes in contacts.web.x</span></code></pre>
+<h4>Counting Things</h4>
+<p>By default <code>send</code> sends absolute values, this is rarely what you want when working from the client, incrementing
+a counter is usually more helpful:</p>
+<pre><code class="lang-coffeescript">bucky.count(<span class="string">'my.awesome.thing'</span>)
+bucky.count(<span class="string">'number.of.chips.eaten'</span>, <span class="number">5</span>)</code></pre>
+<h4>Timing Things</h4>
+<p>You can manually send ms durations using send:</p>
+<pre><code class="lang-coffeescript">bucky.timer.send(<span class="string">'timed.thing'</span>, <span class="number">55</span>)</code></pre>
+<p>Bucky includes a method to time async functions:</p>
+<pre><code class="lang-coffeescript">bucky.timer.time <span class="string">'my.awesome.function'</span>, (done) -&gt;
+  asyncThingy -&gt;
+    done()</code></pre>
+<p>You can also manually start and stop your timer:</p>
+<pre><code class="lang-coffeescript">bucky.timer.start <span class="string">'my.awesome.function'</span>
+
+asyncThingy -&gt;
+  bucky.timer.stop <span class="string">'my.awesome.function'</span></code></pre>
+<p>You can time synchronous functions as well:</p>
+<pre><code class="lang-coffeescript">bucky.timer.timeSync <span class="string">'my.awesome.function'</span>, -&gt;
+  Math.sqrt(<span class="number">100</span>)</code></pre>
+<p>The <code>time</code> and <code>timeSync</code> functions also accept a context and arguments to pass to the 
+called function:</p>
+<pre><code class="lang-coffeescript">bucky.timer.timeSync <span class="string">'my.render.function'</span>, <span class="property">@render</span>, @, arg1, arg2</code></pre>
+<p>You can wrap existing functions using <code>wrap</code>:</p>
+<pre><code class="lang-coffeescript">func = bucky.timer.wrap(<span class="string">'func.time'</span>, func)</code></pre>
+<p>It also supports a special syntax for methods:</p>
+<pre><code class="lang-coffeescript"><span class="class"><span class="keyword">class</span> <span class="title">SomeClass</span></span>
+  render: bucky.timer.wrap(<span class="string">'render'</span>) -&gt;
+    <span class="comment"># Normal render stuff</span></code></pre>
+<p>Note that this wrapping does not play nice with CoffeeScript <code>super</code> calls.</p>
+<p>Bucky also includes a function for measuring the time since the navigationStart event was fired (the beginning of the request):</p>
+<pre><code class="lang-coffeescript">bucky.timer.mark(<span class="string">'my.thing.happened'</span>)</code></pre>
+<p>It acts like a timer where the start is always navigation start.</p>
+<p>The stopwatch method allows you to begin a timer which can be stopped multiple times:</p>
+<pre><code class="lang-coffeescript">watch = bucky.stopwatch(<span class="string">'some.prefix.if.you.want'</span>)</code></pre>
+<p>You can then call <code>watch.mark(&#39;key&#39;)</code> to send the time since the stopwatch started, or
+<code>watch.split(&#39;key&#39;)</code> to send the time since the last split.</p>
+<h3>Sending Points</h3>
+<p>If you want to send absolute values (rare from the client), you can use send directly.</p>
+<p>The one use we&#39;ve had for this is sending <code>+new Date</code> from every client to get an idea
+of how skewed their clocks are.</p>
+<pre><code class="lang-coffeescript">Bucky.send <span class="string">'my.awesome.datapoint'</span>, <span class="number">2432.43434</span></code></pre>
+<h3>Your Stats</h3>
+<p>You can find your stats in the <code>stats</code> and <code>stats.timing</code> folders in graphite, or as written in OpenTSDB.</p>
+<h3>Send Frequency</h3>
+<p>Bucky will send your data in bulk from the client either five seconds after the last datapoint is added, or thirty seconds after
+the last send, whichever comes first.  If you log multiple datapoints within this send frequency, the points will
+be averaged (and the appropriate frequency information will be sent to statsd) (with the exception of counters, they
+are incremented).  This means that the max and min numbers you get from statsd actually represent the max and min 
+5-30 second bucket.  Note that this is per-client, not for the entire bucky process (it&#39;s generally only important
+on the server where you might be pushing out many points with the same key).</p>
+<h3>Bucky Object</h3>
+<p>The Bucky object provides a couple extra properties you can access:</p>
+<ul>
+<li><code>Bucky.history</code>: The history of all datapoints ever send.</li>
+<li><code>Bucky.active</code>: Is Bucky sending data?  This can change if you change the <code>active</code> or <code>sample</code> settings.</li>
+<li><code>Bucky.flush()</code>: Send the Bucky queue immediately</li>
+<li><code>Bucky.timer.now()</code>: A clock based on the most precise time available (not guarenteed to be from the epoch)</li>
+</ul>
+<h3>URL -&gt; Key Transformation</h3>
+<p><code>request.monitor</code> attempts to automatically transform your urls into keys.  It does a bunch of transformations
+with the goal of removing anything which will vary per-request, so you end up with stats per-endpoint.  These
+tranformations include:</p>
+<ul>
+<li>Stripping GUIDS, IDs, SHA1s, MD5s</li>
+<li>Stripping email addresses</li>
+<li>Stripping domains</li>
+</ul>
+<p>If you find these tranformations too invasive, or not invasive enough, you can modify them.</p>
+<pre><code class="lang-javascript"><span class="comment">// You can diable tranforms with `.disable`</span>
+Bucky.requests.transforms.disable(<span class="string">'guid'</span>);
+
+<span class="comment">// You can enable transforms with `.enable`</span>
+Bucky.requests.tranforms.enable(<span class="string">'guid'</span>);
+
+<span class="comment">// `.enable` can also be used to add a new tranform:</span>
+Bucky.requests.transforms.enable(<span class="string">'my-ids'</span>, <span class="regexp">/[0-9]{4}-[0-9]{12}/g</span>)
+
+<span class="comment">// The third argument defines what the match is replaced with (rather than just eliminating it):</span>
+Bucky.requests.transforms.enable(<span class="string">'campaign'</span>, <span class="regexp">/campaigns\/\w{15}/ig</span>, <span class="string">'/campaigns'</span>)
+
+<span class="comment">// You can also just provide a function which takes in the url, and returns it modified:</span>
+Bucky.request.transforms.enable(<span class="string">'soup'</span>, <span class="keyword">function</span>(url){ <span class="keyword">return</span> url.split(<span class="string">''</span>).reverse().join(<span class="string">''</span>); })</code></pre>
+<p>Enabled tests will be added to the beginning of the <code>enabled</code> list, meaning they will be executed before
+any other tranform.  Edit the <code>Bucky.requests.tranforms.enabled</code> array if you need more specific control.</p>
+<p>The order of the transforms is very important.  If you, for example, were to run the <code>id</code> transform before
+the <code>guid</code> one, the <code>guid</code> transform wouldn&#39;t match any guid which began with a number (as the number would
+have already been stripped out, making the guid the wrong length).</p>
+<p>When you first enable request monitoring, it&#39;s a good idea to keep an eye on the Bucky logs to get
+an idea of what sort of data points are being created.</p>
+<h3>App Server</h3>
+<p>This project pushes data to the Bucky Server.</p>
+<p><a href="http://github.com/HubSpot/BuckyServer">Server Documentation</a></p>
+<script src="http://github.hubspot.com/BuckyClient/bucky.js"></script>
+</div></div></div></div><div class="hs3-public-footer"><div class="row-fluid hs-page-width-normal"><div class="span3 hidden-phone"><h3>HubSpot</h3><ul><li><a href="http://www.hubspot.com">Home</a></li><li><a href="http://www.hubspot.com/software">Products</a></li><li><a href="http://www.hubspot.com/internet-marketing-company/">About</a></li></ul></div><div class="span3"><h3>Projects</h3><ul><li><a href="http://github.hubspot.com/messenger">Messenger</a></li><li><a href="http://github.hubspot.com/facewall">Facewall</a></li><li><a href="http://github.hubspot.com/jquery-zoomer">jQuery Zoomer</a></li><li><a href="http://github.hubspot.com/humanize">Humanize</a></li><li><a href="http://github.hubspot.com/teeble">Teeble</a></li></ul></div><div class="span3"><h3>Development Team</h3><ul><li><a href="http://dev.hubspot.com">Home</a></li><li><a href="http://dev.hubspot.com/teams">Teams</a></li><li><a href="http://dev.hubspot.com/people">People</a></li><li><a href="http://dev.hubspot.com/jobs">Jobs</a></li></ul></div><div class="span3 hidden-phone"><h3>Developer API</h3><ul><li><a href="http://developers.hubspot.com/">Developer Documentation</a></li></ul></div></div></div><!-- Start of Async HubSpot Analytics Code -->
+<script type="text/javascript">
+    (function(d,s,i,r) {
+        if (d.getElementById(i)){return;}
+        var n=d.createElement(s),e=d.getElementsByTagName(s)[0];
+        n.id=i;n.src='//js.hubspot.com/analytics/'+(Math.ceil(new Date()/r)*r)+'/51294.js';
+        e.parentNode.insertBefore(n, e);
+    })(document,"script","hs-analytics",300000);
+</script>
+<!-- End of Async HubSpot Analytics Code --></body></html>
