@@ -1,11 +1,13 @@
-if process?.hrtime?
-  # On the server
+isServer = module? and not window?.module
+
+if isServer
+  {XMLHttpRequest} = require('xmlhttprequest')
+
   now = ->
     time = process.hrtime()
     (time[0] + time[1] / 1e9) * 1000
 
 else
-  # On the client
   now = ->
     window.performance?.now?() ? (+new Date)
 
@@ -133,28 +135,31 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = window.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest())
+    corsSupport = isServer or (window?.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest()))
 
-    match = /^(https?:\/\/[^\/]+)/i.exec options.host
-
-    if match
-      # FQDN
-
-      origin = match[1]
-      if origin is "#{ document.location.protocol }//#{ document.location.host }"
-        sameOrigin = true
-      else
-        sameOrigin = false
-    else
-      # Relative URL
-      
+    if isServer
       sameOrigin = true
+    else
+      match = /^(https?:\/\/[^\/]+)/i.exec options.host
+
+      if match
+        # FQDN
+
+        origin = match[1]
+        if origin is "#{ document.location.protocol }//#{ document.location.host }"
+          sameOrigin = true
+        else
+          sameOrigin = false
+      else
+        # Relative URL
+        
+        sameOrigin = true
 
     sendStart = now()
   
     body = JSON.stringify data
 
-    if not sameOrigin and not corsSupport and window.XDomainRequest?
+    if not sameOrigin and not corsSupport and window?.XDomainRequest?
       # CORS support for IE9
       req = new XDomainRequest
     else
@@ -167,7 +172,7 @@ exportDef = ->
 
     req.open 'POST', "#{ options.host }/send", true
 
-    if window.XDomainRequest? and req instanceof XDomainRequest
+    if window?.XDomainRequest? and req instanceof XDomainRequest
       # Required for XDomainRequest, as application/json is not supported
       req.setRequestHeader 'Content-Type', 'text/plain'
     else
@@ -234,6 +239,10 @@ exportDef = ->
       path
 
     send = (path, value, type='gauge') ->
+      if not value? or not path?
+        log.error "Can't log #{ path }:#{ value }"
+        return
+
       enqueue buildPath(path), value, type
 
     timer = {

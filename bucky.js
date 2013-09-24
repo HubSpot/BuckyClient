@@ -1,8 +1,11 @@
 (function() {
-  var exportDef, extend, initTime, log, now,
+  var XMLHttpRequest, exportDef, extend, initTime, isServer, log, now,
     __slice = [].slice;
 
-  if ((typeof process !== "undefined" && process !== null ? process.hrtime : void 0) != null) {
+  isServer = (typeof module !== "undefined" && module !== null) && !(typeof window !== "undefined" && window !== null ? window.module : void 0);
+
+  if (isServer) {
+    XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
     now = function() {
       var time;
       time = process.hrtime();
@@ -123,21 +126,25 @@
     };
     makeRequest = function(data) {
       var body, corsSupport, match, origin, req, sameOrigin, sendStart;
-      corsSupport = window.XMLHttpRequest && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest());
-      match = /^(https?:\/\/[^\/]+)/i.exec(options.host);
-      if (match) {
-        origin = match[1];
-        if (origin === ("" + document.location.protocol + "//" + document.location.host)) {
-          sameOrigin = true;
-        } else {
-          sameOrigin = false;
-        }
-      } else {
+      corsSupport = isServer || ((typeof window !== "undefined" && window !== null ? window.XMLHttpRequest : void 0) && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest()));
+      if (isServer) {
         sameOrigin = true;
+      } else {
+        match = /^(https?:\/\/[^\/]+)/i.exec(options.host);
+        if (match) {
+          origin = match[1];
+          if (origin === ("" + document.location.protocol + "//" + document.location.host)) {
+            sameOrigin = true;
+          } else {
+            sameOrigin = false;
+          }
+        } else {
+          sameOrigin = true;
+        }
       }
       sendStart = now();
       body = JSON.stringify(data);
-      if (!sameOrigin && !corsSupport && (window.XDomainRequest != null)) {
+      if (!sameOrigin && !corsSupport && ((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null)) {
         req = new XDomainRequest;
       } else {
         req = new XMLHttpRequest;
@@ -146,7 +153,7 @@
         track: false
       };
       req.open('POST', "" + options.host + "/send", true);
-      if ((window.XDomainRequest != null) && req instanceof XDomainRequest) {
+      if (((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null) && req instanceof XDomainRequest) {
         req.setRequestHeader('Content-Type', 'text/plain');
       } else {
         req.setRequestHeader('Content-Type', 'application/json');
@@ -214,6 +221,10 @@
       send = function(path, value, type) {
         if (type == null) {
           type = 'gauge';
+        }
+        if ((value == null) || (path == null)) {
+          log.error("Can't log " + path + ":" + value);
+          return;
         }
         return enqueue(buildPath(path), value, type);
       };

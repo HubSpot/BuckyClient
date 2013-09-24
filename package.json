@@ -1,9 +1,11 @@
 {
   "name": "bucky",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Get performance data from the client into statsd, graphite, etc.",
   "main": "./bucky.js",
-  "dependencies": {},
+  "dependencies": {
+    "xmlhttprequest": "~1.6.0"
+  },
   "devDependencies": {
     "grunt-contrib-concat": "~0.3.0",
     "grunt-contrib-coffee": "~0.7.0",
