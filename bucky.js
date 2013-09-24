@@ -83,7 +83,7 @@
       if (precision == null) {
         precision = options.decimalPrecision;
       }
-      return num.toFixed(precision);
+      return Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
     };
     queue = {};
     enqueue = function(path, value, type) {

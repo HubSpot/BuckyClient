@@ -86,7 +86,7 @@ exportDef = ->
     options
 
   round = (num, precision=options.decimalPrecision) ->
-    num.toFixed(precision)
+    Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision)
 
   queue = {}
   enqueue = (path, value, type) ->
