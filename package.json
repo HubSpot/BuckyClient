@@ -1,15 +1,9 @@
 {
   "name": "bucky",
   "version": "0.2.0",
-  "description": "Get performance data from the client",
-  "main": "static/coffee/client.coffee",
-  "dependencies": {
-    "underscore": "~1.4.4",
-    "jquery": "~1.8.3",
-    "unhapi": "~0.8.2",
-    "enviro": "~0.2.1",
-    "buttercream": "~0.1.2"
-  },
+  "description": "Get performance data from the client into statsd, graphite, etc.",
+  "main": "./bucky.js",
+  "dependencies": {},
   "devDependencies": {
     "grunt-contrib-concat": "~0.3.0",
     "grunt-contrib-coffee": "~0.7.0",
@@ -17,7 +11,8 @@
     "grunt-contrib-uglify": "~0.2.4",
     "grunt": "~0.4.1",
     "grunt-contrib-jasmine": "~0.5.2",
-    "grunt-contrib-watch": "~0.5.3"
+    "grunt-contrib-watch": "~0.5.3",
+    "coffee-script": "~1.6.3"
   },
   "author": "Zack Bloom <zbloom@hubspot.com>"
 }
