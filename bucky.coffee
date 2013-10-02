@@ -8,6 +8,8 @@ if isServer
     (time[0] + time[1] / 1e9) * 1000
 
 else
+  XMLHttpRequest = window.XMLHttpRequest
+
   now = ->
     window.performance?.now?() ? (+new Date)
 
@@ -135,7 +137,7 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = isServer or (window?.XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest()))
+    corsSupport = isServer or (XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest()))
 
     if isServer
       sameOrigin = true
@@ -157,26 +159,24 @@ exportDef = ->
 
     sendStart = now()
   
-    body = JSON.stringify data
+    body = ''
+    for name, val of data
+      body += "#{ name }:#{ val }\n"
 
     if not sameOrigin and not corsSupport and window?.XDomainRequest?
       # CORS support for IE9
-      req = new XDomainRequest
+      req = new window.XDomainRequest
     else
       req = new XMLHttpRequest
 
     # Don't track this request with Bucky, as we'd be tracking our own
     # sends forever.  The latency of this request is independently tracked
-    # with updateLatency.
+    # by updateLatency.
     req.bucky = {track: false}
 
-    req.open 'POST', "#{ options.host }/send", true
+    req.open 'POST', "#{ options.host }/v1/send", true
 
-    if window?.XDomainRequest? and req instanceof XDomainRequest
-      # Required for XDomainRequest, as application/json is not supported
-      req.setRequestHeader 'Content-Type', 'text/plain'
-    else
-      req.setRequestHeader 'Content-Type', 'application/json'
+    req.setRequestHeader 'Content-Type', 'text/plain'
 
     req.addEventListener 'load', ->
       updateLatency(now() - sendStart)
@@ -355,8 +355,8 @@ exportDef = ->
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
-        document.addEventListener? 'DOMContentLoaded', ->
-          sendPerformanceData.apply(@, arguments)
+        document.addEventListener? 'DOMContentLoaded', =>
+          sendPerformanceData.call(@, path)
         , false
 
         return false

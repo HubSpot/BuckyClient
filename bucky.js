@@ -12,6 +12,7 @@
       return (time[0] + time[1] / 1e9) * 1000;
     };
   } else {
+    XMLHttpRequest = window.XMLHttpRequest;
     now = function() {
       var _ref, _ref1;
       return (_ref = (_ref1 = window.performance) != null ? typeof _ref1.now === "function" ? _ref1.now() : void 0 : void 0) != null ? _ref : +(new Date);
@@ -125,8 +126,8 @@
       }
     };
     makeRequest = function(data) {
-      var body, corsSupport, match, origin, req, sameOrigin, sendStart;
-      corsSupport = isServer || ((typeof window !== "undefined" && window !== null ? window.XMLHttpRequest : void 0) && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest()));
+      var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val;
+      corsSupport = isServer || (XMLHttpRequest && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest()));
       if (isServer) {
         sameOrigin = true;
       } else {
@@ -143,21 +144,21 @@
         }
       }
       sendStart = now();
-      body = JSON.stringify(data);
+      body = '';
+      for (name in data) {
+        val = data[name];
+        body += "" + name + ":" + val + "\n";
+      }
       if (!sameOrigin && !corsSupport && ((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null)) {
-        req = new XDomainRequest;
+        req = new window.XDomainRequest;
       } else {
         req = new XMLHttpRequest;
       }
       req.bucky = {
         track: false
       };
-      req.open('POST', "" + options.host + "/send", true);
-      if (((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null) && req instanceof XDomainRequest) {
-        req.setRequestHeader('Content-Type', 'text/plain');
-      } else {
-        req.setRequestHeader('Content-Type', 'application/json');
-      }
+      req.open('POST', "" + options.host + "/v1/send", true);
+      req.setRequestHeader('Content-Type', 'text/plain');
       req.addEventListener('load', function() {
         return updateLatency(now() - sendStart);
       }, false);
@@ -347,7 +348,8 @@
       };
       sentPerformanceData = false;
       sendPerformanceData = function(path) {
-        var key, start, time, _ref, _ref1, _ref2;
+        var key, start, time, _ref, _ref1, _ref2,
+          _this = this;
         if (path == null) {
           path = 'timing';
         }
@@ -360,7 +362,7 @@
         if ((_ref1 = document.readyState) === 'uninitialized' || _ref1 === 'loading') {
           if (typeof document.addEventListener === "function") {
             document.addEventListener('DOMContentLoaded', function() {
-              return sendPerformanceData.apply(this, arguments);
+              return sendPerformanceData.call(_this, path);
             }, false);
           }
           return false;

@@ -165,7 +165,7 @@ bucky.count('number.of.chips.eaten', 5)
 
 #### Timing Things
 
-You can manually send ms durations using send:
+You can manually send ms durations using `timer.send`:
 
 ```coffeescript
 bucky.timer.send('timed.thing', 55)
