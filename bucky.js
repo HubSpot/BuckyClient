@@ -52,7 +52,7 @@
   };
 
   exportDef = function() {
-    var $tag, ACTIVE, HISTORY, TYPE_MAP, client, considerSending, currentLatency, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
+    var $tag, ACTIVE, HISTORY, TYPE_MAP, client, considerSending, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -216,10 +216,9 @@
       makeRequest(out);
       return queue = {};
     };
-    currentLatency = 0;
     latencySent = false;
     updateLatency = function(time) {
-      currentLatency = time;
+      Bucky.latency = time;
       if (options.sendLatency && !latencySent) {
         enqueue('bucky.latency', time, 'timer');
         latencySent = true;

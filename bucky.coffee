@@ -235,10 +235,9 @@ exportDef = ->
 
     queue = {}
 
-  currentLatency = 0
   latencySent = false
   updateLatency = (time) ->
-    currentLatency = time
+    Bucky.latency = time
 
     if options.sendLatency and not latencySent
       enqueue 'bucky.latency', time, 'timer'
