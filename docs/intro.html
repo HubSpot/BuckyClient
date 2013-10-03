@@ -23,29 +23,32 @@
         </div>
     </div>
 </div>
-<div class="hs-page-width-normal"><div class="row-fluid"><div class="span6"><h1 class="hs-doc-page-header"><a class="hs-doc-homepage-link" href="">Bucky Client</a></h1></div><div class="span6 hidden-phone"><div class="hs-doc-slim-github-link-wrapper"><a class="hs-doc-slim-github-link" href="http://github.com/HubSpot/BuckyClient">On GitHub</a></div></div></div></div><div class="hs-page-width-normal"><div class="row-fluid"><div class="span3"><div class="hs-doc-sidenav"><nav><ul class="hs-public-sidenav"><li class=""><a href="">Home</a></li></ul></nav></div></div><div class="span9"><div class="hs-doc-content"><h1>Bucky</h1>
+<div class="hs-page-width-normal"><div class="row-fluid"><div class="span6"><h1 class="hs-doc-page-header"><a class="hs-doc-homepage-link" href="../">Bucky Client</a></h1></div><div class="span6 hidden-phone"><div class="hs-doc-slim-github-link-wrapper"><a class="hs-doc-slim-github-link" href="http://github.com/HubSpot/BuckyClient">On GitHub</a></div></div></div></div><div class="hs-page-width-normal"><div class="row-fluid"><div class="span3"><div class="hs-doc-sidenav"><nav><ul class="hs-public-sidenav"><li class=""><a href="../">Home</a></li><li><b>Annotated source</b></li><li><a target="_blank" href="../source/bucky.html">bucky.coffee</a></li></ul></nav></div></div><div class="span9"><div class="hs-doc-content"><h1>Bucky</h1>
 <p>Bucky is a client and server for sending performance data from the client into statsd+graphite, OpenTSDB, or any
 other stats aggregator of your choice.</p>
 <p>It can automatically measure how long your pages take to load, how long AJAX requests take and how long
 various functions take to run.  Most importantly, it&#39;s taking the measurements on actual page loads,
 so the data has the potential to be much more valuable than in vitro measurements.</p>
 <p>If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you&#39;re not
-collecting stats, you <a href="https://github.com/HubSpot/BuckyServer/blob/master/docs/start-no-stats.md">should start</a>!
+collecting stats, you <a href="http://github.hubspot.com/BuckyServer/getting_started/choosing_a_stats_service/">should start</a>!
 What gets measured gets managed.</p>
 <h3>Server</h3>
 <p>You can play with Bucky just using the client, but if you&#39;d like to start collecting data, see the
-<a href="http://github.com/HubSpot/BuckyServer">Server Instructions</a>.</p>
+<a href="http://github.hubspot.com/BuckyServer/">Server Instructions</a>.</p>
 <h3>Setup</h3>
 <h4>From The Client</h4>
-<p>Include <code>BuckyClient/bucky.js</code> file on your page</p>
-<p>The <code>Bucky</code> object will be available globally.</p>
-<p>Bucky can also be loaded with AMD or Browserify.</p>
-<p>Here is <a href="http://github.hubspot.com/BuckyClient/quickstart">an example</a> of what you should do as early in the loading process as is possible.</p>
+<p>Include <a href="https://raw.github.com/HubSpot/BuckyClient/v0.2.3/bucky.min.js">bucky.js</a> on your page, the only required config can be done right in the script tag:</p>
+<pre><code class="lang-html"><span class="tag">&lt;<span class="title">script</span> <span class="attribute">src</span>=<span class="value">"bucky.js"</span> <span class="attribute">data-bucky-host</span>=<span class="value">"/bucky"</span> <span class="attribute">data-bucky-page</span> <span class="attribute">data-bucky-requests</span>&gt;</span><span class="javascript"></span><span class="tag">&lt;/<span class="title">script</span>&gt;</span></code></pre>
+<p>That config will automatically log the performance of your page and all the requests you make to a server running at
+/bucky.  It will automatically decide the right key name based on the url of the page.  If you&#39;d like, you can also specify it manually:</p>
+<pre><code class="lang-html"><span class="tag">&lt;<span class="title">script</span> <span class="attribute">src</span>=<span class="value">"bucky.js"</span> <span class="attribute">data-bucky-host</span>=<span class="value">"/bucky"</span> <span class="attribute">data-bucky-page</span>=<span class="value">"index"</span> <span class="attribute">data-bucky-requests</span>=<span class="value">"index"</span>&gt;</span><span class="javascript"></span><span class="tag">&lt;/<span class="title">script</span>&gt;</span></code></pre>
+<p>The <code>Bucky</code> object will be available globally, but there is nothing you need to call for basic usage.</p>
+<p>Bucky can also be loaded with AMD or Browserify (see the methods below).</p>
 <h4>From Node</h4>
 <pre><code class="lang-bash">npm install bucky</code></pre>
 <pre><code class="lang-coffeescript">bucky = require(<span class="string">'bucky'</span>)</code></pre>
 <h3>Configuring</h3>
-<p>Before sending any data, call <code>setOptions</code>:</p>
+<p>Before sending any data, call <code>setOptions</code> if you&#39;re not using the data- attribute based configuration:</p>
 <pre><code class="lang-javascript">Bucky.setOptions({
   host: <span class="string">'http://myweb.site:9999/bucky'</span>
 });</code></pre>
@@ -67,7 +70,8 @@ full list of options.</p>
 <p>Modern browsers log a bunch of page performance data, bucky includes a method for writing all of this in
 one go.  It won&#39;t do anything on browsers which don&#39;t support the performance.timing api.  Call it whenever,
 it will bind an event if the data isn&#39;t ready yet.</p>
-<pre><code class="lang-coffeescript">Bucky.sendPerformanceData(<span class="string">'where.the.data.should.go'</span>)</code></pre>
+<pre><code class="lang-coffeescript">Bucky.sendPagePerformance(<span class="string">'where.the.data.should.go'</span>)</code></pre>
+<p>Setting <code>data-bucky-page</code> triggers this automatically.</p>
 <p>The two most relevant stats provided are <code>responseEnd</code> which is the amount of time it took for the
 original page to be loaded and <code>domInteractive</code> which is the amount of time before the page has
 finished loaded and can be interacted with by the user.</p>
@@ -76,7 +80,7 @@ old browsers see.</p>
 <p>If you&#39;re using Backbone, it might be a good idea to send your data based on route:</p>
 <pre><code class="lang-coffeescript">Backbone.history.<span class="literal">on</span> <span class="string">'route'</span>, (router, route) -&gt;
    <span class="comment"># Will only send on the initial page load:</span>
-   Bucky.sendPerformanceData(<span class="string">"some.location.page.<span class="subst">#{ route }</span>"</span>)</code></pre>
+   Bucky.sendPagePerformance(<span class="string">"some.location.page.<span class="subst">#{ route }</span>"</span>)</code></pre>
 <p>The data collected will look something like this:</p>
 <pre><code class="lang-javascript">pages.contactDetail.timing.connectEnd: <span class="string">"172.000|ms"</span>
 pages.contactDetail.timing.connectStart: <span class="string">"106.000|ms"</span>
@@ -99,6 +103,7 @@ pages.contactDetail.timing.secureConnectionStart: <span class="string">"106.000|
 <p>Bucky can automatically log all ajax requests made by hooking into XMLHttpRequest and doing some transformations
 on the url to try and create a graphite key from it.  Enable it as early in your app&#39;s load as is possible:</p>
 <pre><code class="lang-coffeescript">Bucky.requests.monitor(<span class="string">'my.project.requests'</span>)</code></pre>
+<p>Setting <code>data-bucky-requests</code> calls this automatically.</p>
 <p>The data collected will look something like this for a GET request to
 <code>api.hubapi.com/automation/v2/workflows</code>:</p>
 <pre><code class="lang-javascript">contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get: <span class="string">"656.794|ms"</span>
@@ -125,7 +130,7 @@ a counter is usually more helpful:</p>
 <pre><code class="lang-coffeescript">bucky.count(<span class="string">'my.awesome.thing'</span>)
 bucky.count(<span class="string">'number.of.chips.eaten'</span>, <span class="number">5</span>)</code></pre>
 <h4>Timing Things</h4>
-<p>You can manually send ms durations using send:</p>
+<p>You can manually send ms durations using <code>timer.send</code>:</p>
 <pre><code class="lang-coffeescript">bucky.timer.send(<span class="string">'timed.thing'</span>, <span class="number">55</span>)</code></pre>
 <p>Bucky includes a method to time async functions:</p>
 <pre><code class="lang-coffeescript">bucky.timer.time <span class="string">'my.awesome.function'</span>, (done) -&gt;
@@ -211,7 +216,7 @@ have already been stripped out, making the guid the wrong length).</p>
 an idea of what sort of data points are being created.</p>
 <h3>App Server</h3>
 <p>This project pushes data to the Bucky Server.</p>
-<p><a href="http://github.com/HubSpot/BuckyServer">Server Documentation</a></p>
+<p><a href="http://github.hubspot.com/BuckyServer">Server Documentation</a></p>
 <script src="http://github.hubspot.com/BuckyClient/bucky.js"></script>
 </div></div></div></div><div class="hs3-public-footer"><div class="row-fluid hs-page-width-normal"><div class="span3 hidden-phone"><h3>HubSpot</h3><ul><li><a href="http://www.hubspot.com">Home</a></li><li><a href="http://www.hubspot.com/software">Products</a></li><li><a href="http://www.hubspot.com/internet-marketing-company/">About</a></li></ul></div><div class="span3"><h3>Projects</h3><ul><li><a href="http://github.hubspot.com/messenger">Messenger</a></li><li><a href="http://github.hubspot.com/facewall">Facewall</a></li><li><a href="http://github.hubspot.com/jquery-zoomer">jQuery Zoomer</a></li><li><a href="http://github.hubspot.com/humanize">Humanize</a></li><li><a href="http://github.hubspot.com/teeble">Teeble</a></li></ul></div><div class="span3"><h3>Development Team</h3><ul><li><a href="http://dev.hubspot.com">Home</a></li><li><a href="http://dev.hubspot.com/teams">Teams</a></li><li><a href="http://dev.hubspot.com/people">People</a></li><li><a href="http://dev.hubspot.com/jobs">Jobs</a></li></ul></div><div class="span3 hidden-phone"><h3>Developer API</h3><ul><li><a href="http://developers.hubspot.com/">Developer Documentation</a></li></ul></div></div></div><!-- Start of Async HubSpot Analytics Code -->
 <script type="text/javascript">

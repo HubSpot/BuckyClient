@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>bucky.coffee</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+    
+    <ul class="sections">
+        
+          <li id="title">
+              <div class="annotation">
+                  <h1>bucky.coffee</h1>
+              </div>
+          </li>
+        
+        
+        
+        <li id="section-1">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>isServer = module? <span class="keyword">and</span> <span class="keyword">not</span> window?.module
+
+<span class="keyword">if</span> isServer
+  {XMLHttpRequest} = require(<span class="string">'xmlhttprequest'</span>)
+
+  <span class="function"><span class="title">now</span></span> = -&gt;
+    time = process.hrtime()
+    (time[<span class="number">0</span>] + time[<span class="number">1</span>] / <span class="number">1e9</span>) * <span class="number">1000</span>
+
+<span class="keyword">else</span>
+  <span class="function"><span class="title">now</span></span> = -&gt;
+    window.performance?.now?() ? (+<span class="keyword">new</span> Date)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-2">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>This is used if we can&#39;t get the navigationStart time from
+window.performance</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>initTime = +<span class="keyword">new</span> Date
+
+<span class="function"><span class="title">extend</span></span> = (a, objs...) -&gt;
+  <span class="keyword">for</span> obj <span class="keyword">in</span> objs.reverse()
+    <span class="keyword">for</span> key, val <span class="keyword">of</span> obj
+      a[key] = val
+  a
+
+<span class="function"><span class="title">log</span></span> = (msgs...) -&gt;
+  <span class="keyword">if</span> console?.log?.call?
+    console.log msgs...
+
+log.<span class="function"><span class="title">error</span></span> = (msgs...) -&gt;
+  <span class="keyword">if</span> console?.error?.call?
+    console.error msgs...
+
+<span class="function"><span class="title">exportDef</span></span> = -&gt;
+  defaults =</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-3">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>Where is the Bucky server hosted.  This should be both the host and the APP_ROOT (if you&#39;ve
+defined one).  This default assumes its at the same host as your app.</p>
+<p>Keep in mind that if you use a different host, CORS will come into play.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    host: <span class="string">'/bucky'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-4">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-4">&#182;</a>
+              </div>
+              <p>The max time we should wait between sends</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    maxInterval: <span class="number">30000</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-5">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>How long we should wait from getting the last datapoint
+to do a send, if datapoints keep coming in eventually
+the MAX_INTERVAL will trigger a send.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    aggregationInterval: <span class="number">5000</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-6">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>How many decimal digits should we include in our
+times?</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    decimalPrecision: <span class="number">3</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-7">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+              <p>Bucky can automatically report a datapoint of what its response time
+is.  This is useful because Bucky returns almost immediately, making
+it&#39;s response time a good measure of the user&#39;s connection latency.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    sendLatency: <span class="literal">false</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-8">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
+              </div>
+              <p>Downsampling will cause Bucky to only send data 100*SAMPLE percent
+of the time.  It is used to reduce the amount of data sent to the backend.</p>
+<p>It&#39;s not done per datapoint, but per client, so you probably don&#39;t want to downsample
+on node (you would be telling a percentage of your servers to not send data).</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    sample: <span class="number">1</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-9">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-9">&#182;</a>
+              </div>
+              <p>Set to false to disable sends (in dev mode for example)</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    active: <span class="literal">true</span>
+
+  tagOptions = {}
+  <span class="keyword">if</span> <span class="keyword">not</span> isServer
+    $tag = document.querySelector(<span class="string">'[data-bucky-host],[data-bucky-page],[data-bucky-requests]'</span>)
+    <span class="keyword">if</span> $tag
+      tagOptions = {
+        host: $tag.getAttribute(<span class="string">'data-bucky-host'</span>)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-10">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-10">&#182;</a>
+              </div>
+              <p>These are to allow you to send page peformance data without having to manually call
+the methods.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        pagePerformanceKey: $tag.getAttribute(<span class="string">'data-bucky-page'</span>)
+        requestsKey: $tag.getAttribute(<span class="string">'data-bucky-requests'</span>)
+      }
+
+      <span class="keyword">for</span> key <span class="keyword">in</span> [<span class="string">'pagePerformanceKey'</span>, <span class="string">'requestsKey'</span>]
+        <span class="keyword">if</span> tagOptions[key]?.toString().toLowerCase() <span class="keyword">is</span> <span class="string">'true'</span> <span class="keyword">or</span> tagOptions[key] <span class="keyword">is</span> <span class="string">''</span>
+          tagOptions[key] = <span class="literal">true</span>
+        <span class="keyword">else</span> <span class="keyword">if</span> tagOptions[key]?.toString().toLowerCase <span class="keyword">is</span> <span class="string">'false'</span>
+          tagOptions[key] = <span class="literal">null</span>
+   
+  options = extend {}, defaults, tagOptions
+    
+  TYPE_MAP =
+    <span class="string">'timer'</span>: <span class="string">'ms'</span>
+    <span class="string">'gauge'</span>: <span class="string">'g'</span>
+    <span class="string">'counter'</span>: <span class="string">'c'</span>
+
+  ACTIVE = options.active
+  <span class="keyword">do</span> <span class="function"><span class="title">updateActive</span></span> = -&gt;
+    ACTIVE = options.active <span class="keyword">and</span> Math.random() &lt; options.sample
+
+  HISTORY = []
+
+  <span class="function"><span class="title">setOptions</span></span> = (opts) -&gt;
+    extend options, opts
+
+    <span class="keyword">if</span> <span class="string">'sample'</span> <span class="keyword">of</span> opts <span class="keyword">or</span> <span class="string">'active'</span> <span class="keyword">of</span> opts
+      updateActive()
+
+    options
+
+  <span class="function"><span class="title">round</span></span> = (num, precision=options.decimalPrecision) -&gt;
+    Math.round(num * Math.pow(<span class="number">10</span>, precision)) / Math.pow(<span class="number">10</span>, precision)
+
+  queue = {}
+  <span class="function"><span class="title">enqueue</span></span> = (path, value, type) -&gt;
+    <span class="keyword">return</span> <span class="keyword">unless</span> ACTIVE
+
+    count = <span class="number">1</span>
+
+    <span class="keyword">if</span> path <span class="keyword">of</span> queue</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-11">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-11">&#182;</a>
+              </div>
+              <p>We have multiple of the same datapoint in this queue</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      <span class="keyword">if</span> type <span class="keyword">is</span> <span class="string">'counter'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-12">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-12">&#182;</a>
+              </div>
+              <p>Sum the queue</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        value += queue[path].value
+      <span class="keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-13">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-13">&#182;</a>
+              </div>
+              <p>If it&#39;s a timer or a gauge, calculate a running average</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        count = queue[path].count ? count
+        count++
+
+        value = queue[path].value + (value - queue[path].value) / count
+
+    queue[path] = {value, type, count}
+
+    <span class="keyword">do</span> considerSending
+
+  sendTimeout = <span class="literal">null</span>
+  maxTimeout = <span class="literal">null</span>
+
+  <span class="function"><span class="title">flush</span></span> = -&gt;
+    clearTimeout sendTimeout
+    clearTimeout maxTimeout
+
+    maxTimeout = <span class="literal">null</span>
+    sendTimeout = <span class="literal">null</span>
+
+    <span class="keyword">do</span> sendQueue
+
+  <span class="function"><span class="title">considerSending</span></span> = -&gt;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-14">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-14">&#182;</a>
+              </div>
+              <p>We set two different timers, one which resets with every request
+to try to get as many datapoints into each send, and another which
+will force a send if too much time has gone by with continuous
+points coming in.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    clearTimeout sendTimeout
+    sendTimeout = setTimeout flush, options.aggregationInterval
+
+    <span class="keyword">unless</span> maxTimeout?
+      maxTimeout = setTimeout flush, options.maxInterval
+
+  <span class="function"><span class="title">makeRequest</span></span> = (data) -&gt;
+    corsSupport = isServer <span class="keyword">or</span> (window.XMLHttpRequest <span class="keyword">and</span> (window.XMLHttpRequest.defake <span class="keyword">or</span> <span class="string">'withCredentials'</span> <span class="keyword">of</span> <span class="keyword">new</span> window.XMLHttpRequest()))
+
+    <span class="keyword">if</span> isServer
+      sameOrigin = <span class="literal">true</span>
+    <span class="keyword">else</span>
+      match = <span class="regexp">/^(https?:\/\/[^\/]+)/i</span>.exec options.host
+
+      <span class="keyword">if</span> match</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-15">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-15">&#182;</a>
+              </div>
+              <p>FQDN</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        origin = match[<span class="number">1</span>]
+        <span class="keyword">if</span> origin <span class="keyword">is</span> <span class="string">"<span class="subst">#{ document.location.protocol }</span>//<span class="subst">#{ document.location.host }</span>"</span>
+          sameOrigin = <span class="literal">true</span>
+        <span class="keyword">else</span>
+          sameOrigin = <span class="literal">false</span>
+      <span class="keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-16">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-16">&#182;</a>
+              </div>
+              <p>Relative URL</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        
+        sameOrigin = <span class="literal">true</span>
+
+    sendStart = now()
+  
+    body = <span class="string">''</span>
+    <span class="keyword">for</span> name, val <span class="keyword">of</span> data
+      body += <span class="string">"<span class="subst">#{ name }</span>:<span class="subst">#{ val }</span>\n"</span>
+
+    <span class="keyword">if</span> <span class="keyword">not</span> sameOrigin <span class="keyword">and</span> <span class="keyword">not</span> corsSupport <span class="keyword">and</span> window?.XDomainRequest?</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-17">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-17">&#182;</a>
+              </div>
+              <p>CORS support for IE9</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      req = <span class="keyword">new</span> window.XDomainRequest
+    <span class="keyword">else</span>
+      req = <span class="keyword">new</span> (window?.XMLHttpRequest ? XMLHttpRequest)</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-18">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-18">&#182;</a>
+              </div>
+              <p>Don&#39;t track this request with Bucky, as we&#39;d be tracking our own
+sends forever.  The latency of this request is independently tracked
+by updateLatency.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>    req.bucky = {track: <span class="literal">false</span>}
+
+    req.open <span class="string">'POST'</span>, <span class="string">"<span class="subst">#{ options.host }</span>/v1/send"</span>, <span class="literal">true</span>
+
+    req.setRequestHeader <span class="string">'Content-Type'</span>, <span class="string">'text/plain'</span>
+
+    req.addEventListener <span class="string">'load'</span>, -&gt;
+      updateLatency(now() - sendStart)
+    , <span class="literal">false</span>
+
+    req.send body
+
+    req
+
+  <span class="function"><span class="title">sendQueue</span></span> = -&gt;
+    <span class="keyword">if</span> <span class="keyword">not</span> ACTIVE
+      log <span class="string">"Would send bucky queue"</span>
+      <span class="keyword">return</span>
+
+    out = {}
+    <span class="keyword">for</span> key, point <span class="keyword">of</span> queue
+      HISTORY.push
+        path: key
+        count: point.count
+        type: point.type
+        value: point.value
+
+      <span class="keyword">unless</span> TYPE_MAP[point.type]?
+        log.error <span class="string">"Type <span class="subst">#{ point.type }</span> not understood by Bucky"</span>
+        <span class="keyword">continue</span>
+
+      value = point.value
+      <span class="keyword">if</span> point.type <span class="keyword">in</span> [<span class="string">'gauge'</span>, <span class="string">'timer'</span>]
+        value = round(value)
+
+      out[key] = <span class="string">"<span class="subst">#{ value }</span>|<span class="subst">#{ TYPE_MAP[point.type] }</span>"</span>
+
+      <span class="keyword">if</span> point.count <span class="keyword">isnt</span> <span class="number">1</span>
+        out[key] += <span class="string">"@<span class="subst">#{ round(<span class="number">1</span> / point.count, <span class="number">5</span>) }</span>"</span>
+
+    makeRequest out
+
+    queue = {}
+
+  latencySent = <span class="literal">false</span>
+  <span class="function"><span class="title">updateLatency</span></span> = (time) -&gt;
+    Bucky.latency = time
+
+    <span class="keyword">if</span> options.sendLatency <span class="keyword">and</span> <span class="keyword">not</span> latencySent
+      enqueue <span class="string">'bucky.latency'</span>, time, <span class="string">'timer'</span>
+
+      latencySent = <span class="literal">true</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-19">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-19">&#182;</a>
+              </div>
+              <p>We may be running on node where this process could be around for
+a while, let&#39;s send latency updates every five minutes.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>      setTimeout -&gt;
+        latencySent = <span class="literal">false</span>
+      , <span class="number">5</span>*<span class="number">60</span>*<span class="number">1000</span>
+
+  <span class="function"><span class="title">makeClient</span></span> = (prefix=<span class="string">''</span>) -&gt;
+    <span class="function"><span class="title">buildPath</span></span> = (path) -&gt;
+      <span class="keyword">if</span> prefix?.length
+        prefix + <span class="string">'.'</span> + path
+      path
+
+    <span class="function"><span class="title">send</span></span> = (path, value, type=<span class="string">'gauge'</span>) -&gt;
+      <span class="keyword">if</span> <span class="keyword">not</span> value? <span class="keyword">or</span> <span class="keyword">not</span> path?
+        log.error <span class="string">"Can't log <span class="subst">#{ path }</span>:<span class="subst">#{ value }</span>"</span>
+        <span class="keyword">return</span>
+
+      enqueue buildPath(path), value, type
+
+    timer = {
+      TIMES: {}
+
+      send: (path, duration) -&gt;
+        send path, duration, <span class="string">'timer'</span>
+
+      time: (path, action, ctx, args...) -&gt;
+        timer.start path
+
+        <span class="function"><span class="title">done</span></span> = =&gt;
+          timer.stop path
+
+        args.splice(<span class="number">0</span>, <span class="number">0</span>, done)
+        action.apply(ctx, args)
+
+      timeSync: (path, action, ctx, args...) -&gt;
+        timer.start path
+
+        ret = action.apply(ctx, args)
+
+        timer.stop path
+
+        ret
+
+      wrap: (path, action) -&gt;
+        <span class="keyword">if</span> action?
+          <span class="keyword">return</span> (args...) -&gt;
+            timer.timeSync path, action, @, args...
+        <span class="keyword">else</span>
+          <span class="keyword">return</span> (action) -&gt;
+            <span class="keyword">return</span> (args...) -&gt;
+              timer.timeSync path, action, @, args...
+
+      start: (path) -&gt;
+        timer.TIMES[path] = now()
+
+      stop: (path) -&gt;
+        <span class="keyword">if</span> <span class="keyword">not</span> timer.TIMES[path]?
+          log.error <span class="string">"Timer <span class="subst">#{ path }</span> ended without having been started"</span>
+          <span class="keyword">return</span>
+
+        duration = now() - timer.TIMES[path]
+
+        timer.TIMES[path] = <span class="literal">undefined</span>
+
+        timer.send path, duration
+
+      stopwatch: (prefix, start) -&gt;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-20">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-20">&#182;</a>
+              </div>
+              <p>A timer that can be stopped multiple times</p>
+<p>If a start time is passed in, it&#39;s assumed
+to be millis since the epoch, not the special
+start time <code>now</code> uses.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        <span class="keyword">if</span> start?
+          <span class="function"><span class="title">_now</span></span> = -&gt; +<span class="keyword">new</span> Date
+        <span class="keyword">else</span>
+          _now = now
+          start = _now()
+
+        last = start
+
+        {
+          mark: (path, offset=<span class="number">0</span>) -&gt;
+            end = _now()
+
+            <span class="keyword">if</span> prefix
+              path = prefix + <span class="string">'.'</span> + path
+
+            timer.send path, (end - start + offset)
+
+          split: (path, offset=<span class="number">0</span>) -&gt;
+            end = _now()
+
+            <span class="keyword">if</span> prefix
+              path = prefix + <span class="string">'.'</span> + path
+
+            timer.send path, (end - last + offset)
+
+            last = end
+        }
+
+      mark: (path, time) -&gt;</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-21">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-21">&#182;</a>
+              </div>
+              <p>A timer which always begins at page load</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        time ?= +<span class="keyword">new</span> Date
+
+        start = timer.navigationStart()
+
+        timer.send path, (time - start)
+
+      navigationStart: -&gt;
+        window?.performance?.timing?.navigationStart ? initTime
+
+      responseEnd: -&gt;
+        window?.performance?.timing?.responseEnd ? initTime
+
+      now: -&gt;
+        now()
+    }
+
+    <span class="function"><span class="title">count</span></span> = (path, count=<span class="number">1</span>) -&gt;
+      send(path, count, <span class="string">'counter'</span>)
+
+    sentPerformanceData = <span class="literal">false</span>
+    <span class="function"><span class="title">sendPagePerformance</span></span> = (path) -&gt;
+      <span class="keyword">return</span> <span class="literal">false</span> <span class="keyword">unless</span> window?.performance?.timing?
+      <span class="keyword">return</span> <span class="literal">false</span> <span class="keyword">if</span> sentPerformanceData
+
+      <span class="keyword">if</span> <span class="keyword">not</span> path <span class="keyword">or</span> path <span class="keyword">is</span> <span class="literal">true</span>
+        path = requests.urlToKey(document.location.toString()) + <span class="string">'.page'</span>
+
+      <span class="keyword">if</span> document.readyState <span class="keyword">in</span> [<span class="string">'uninitialized'</span>, <span class="string">'loading'</span>]</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-22">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-22">&#182;</a>
+              </div>
+              <p>The data isn&#39;t fully ready until document load</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>        document.addEventListener? 'DOMContentLoaded', =&gt;
+          sendPagePerformance.call(@, path)
+        , false
+
+        return false
+
+      sentPerformanceData = true
+
+      start = window.performance.timing.navigationStart
+      for key, time of window.performance.timing when time
+        timer.send "#{ path }.#{ key }", (time - start)
+
+      return true
+
+    requests = {
+      transforms:
+        mapping:
+          guid: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig
+          sha1: /\/[0-9a-f]{40}/ig
+          md5: /\/[0-9a-f]{32}/ig
+          id: /\/[0-9;_\-]+/g
+          email: /\/[^/]+@[^/]+/g
+          domain: [/\/[^/]+\.[a-z]{2,3}\//ig, '/']
+
+        enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain']
+
+        enable: (name, test, replacement='') -&gt;
+          if test?
+            @mapping[name] = [test, replacement]
+
+          @enabled.splice 0, 0, name
+
+        disable: (name) -&gt;
+          for val, i of @enabled
+            if val is name
+              @enabled.splice i, 1
+              return
+
+      sendReadyStateTimes: (path, times) -&gt;
+        return unless times?
+
+        codeMapping =
+          1: 'sending'
+          2: 'headers'
+          3: 'waiting'
+          4: 'receiving'
+
+        diffs = {}
+        last = null
+        for code, time of times
+          if last? and codeMapping[code]?
+            diffs[codeMapping[code]] = time - last
+
+          last = time
+
+        for status, val of diffs
+          timer.send "#{ path }.#{ status }", val
+
+      urlToKey: (url, type, root) -&gt;
+        url = url.replace /https?:\/\//i, ''
+
+        parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url)
+        host = parsedUrl[1]
+        path = parsedUrl[2] ? ''
+
+        for mappingName in requests.transforms.enabled
+          mapping = requests.transforms.mapping[mappingName]
+
+          if not mapping?
+            log.error "Bucky Error: Attempted to enable a mapping which is not defined: #{ mappingName }"
+            continue
+
+          if typeof mapping is 'function'
+            path = mapping path, url, type, root
+            continue
+
+          if mapping instanceof RegExp
+            mapping = [mapping, '']
+
+          path = path.replace(mapping[0], mapping[1])
+
+        path = decodeURIComponent(path)
+
+        path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_')
+
+        stat = host + path.replace(/[\/ ]/g, '.')
+
+        stat = stat.replace /(^\.)|(\.$)/g, ''
+        stat = stat.replace /\.com/, ''
+        stat = stat.replace /www\./, ''
+
+        if root
+          stat = root + '.' + stat
+
+        if type
+          stat = stat + '.' + type.toLowerCase()
+
+        stat = stat.replace /\.\./g, '.'
+
+        stat
+
+      getFullUrl: (url, location=document.location) -&gt;
+        if /^\//.test(url)
+          location.hostname + url
+        else if not /https?:\/\//i.test(url)
+          location.toString() + url
+        else
+          url
+
+      monitor: (root) -&gt;
+        if not root or root is true
+          root = requests.urlToKey(document.location.toString()) + '.requests'
+
+        self = this
+        done = ({type, url, event, request, readyStateTimes, startTime}) -&gt;
+          if startTime?
+            dur = now() - startTime
+          else
+            return
+
+          url = self.getFullUrl url
+          stat = self.urlToKey url, type, root
+
+          send(stat, dur, 'timer')
+
+          self.sendReadyStateTimes stat, readyStateTimes
+
+          if request?.status?
+            if request.status &gt; 12000</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-23">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-23">&#182;</a>
+              </div>
+              <p>Most browsers return status code 0 for aborted/failed requests.  IE returns
+special status codes over 12000: <a href="http://msdn.microsoft.com/en-us/library/aa383770%28VS.85%29.aspx">http://msdn.microsoft.com/en-us/library/aa383770%28VS.85%29.aspx</a></p>
+<p>We&#39;ll track the 12xxx code, but also store it as a 0</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>              count(<span class="string">"<span class="subst">#{ stat }</span>.0"</span>)
+
+            <span class="keyword">else</span> <span class="keyword">if</span> request.status <span class="keyword">isnt</span> <span class="number">0</span>
+              count(<span class="string">"<span class="subst">#{ stat }</span>.<span class="subst">#{ request.status.toString().charAt(<span class="number">0</span>) }</span>xx"</span>)
+
+            count(<span class="string">"<span class="subst">#{ stat }</span>.<span class="subst">#{ request.status }</span>"</span>)
+
+        _XMLHttpRequest = window.XMLHttpRequest
+        window.<span class="function"><span class="title">XMLHttpRequest</span></span> = -&gt;
+          req = <span class="keyword">new</span> _XMLHttpRequest
+
+          <span class="keyword">try</span>
+            startTime = <span class="literal">null</span>
+            readyStateTimes = {}
+
+            _open = req.open
+            req.<span class="function"><span class="title">open</span></span> = (type, url, async) -&gt;
+              <span class="keyword">try</span>
+                readyStateTimes[<span class="number">0</span>] = now()
+
+                req.addEventListener <span class="string">'readystatechange'</span>, -&gt;
+                  readyStateTimes[req.readyState] = now()
+                , <span class="literal">false</span>
+
+                req.addEventListener <span class="string">'loadend'</span>, (event) -&gt;
+                  <span class="keyword">if</span> <span class="keyword">not</span> req.bucky? <span class="keyword">or</span> req.bucky.track <span class="keyword">isnt</span> <span class="literal">false</span>
+                    done {type, url, event, startTime, readyStateTimes, request: req}
+                , <span class="literal">false</span>
+              <span class="keyword">catch</span> e
+                log.error <span class="string">"Bucky error monitoring XHR open call"</span>, e
+
+              _open.apply req, arguments
+
+            _send = req.send
+            req.<span class="function"><span class="title">send</span></span> = -&gt;
+              startTime = now()
+
+              _send.apply req, arguments
+          <span class="keyword">catch</span> e
+            log.error <span class="string">"Bucky error monitoring XHR"</span>, e
+
+          req
+    }
+
+    <span class="function"><span class="title">nextMakeClient</span></span> = (nextPrefix=<span class="string">''</span>) -&gt;
+      path = prefix ? <span class="string">''</span>
+      path += <span class="string">'.'</span> <span class="keyword">if</span> path <span class="keyword">and</span> nextPrefix
+      path += nextPrefix <span class="keyword">if</span> nextPrefix
+
+      makeClient(path)
+
+    exports = {
+      send,
+      count,
+      timer,
+      now,
+      requests,
+      sendPagePerformance,
+      flush,
+      setOptions,
+      options,
+      history: HISTORY,
+      active: ACTIVE
+    }
+
+    <span class="keyword">for</span> key, val <span class="keyword">of</span> exports
+      nextMakeClient[key] = val
+
+    nextMakeClient
+
+  client = makeClient()
+
+  <span class="keyword">if</span> options.pagePerformanceKey
+    client.sendPagePerformance(options.pagePerformanceKey)
+
+  <span class="keyword">if</span> options.requestsKey
+    client.requests.monitor(options.requestsKey)
+
+  client
+
+<span class="keyword">if</span> <span class="keyword">typeof</span> define <span class="keyword">is</span> <span class="string">'function'</span> <span class="keyword">and</span> define.amd</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-24">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-24">&#182;</a>
+              </div>
+              <p>AMD</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  define exportDef
+<span class="keyword">else</span> <span class="keyword">if</span> <span class="keyword">typeof</span> exports <span class="keyword">is</span> <span class="string">'object'</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-25">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>Node</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  module.exports = exportDef()
+<span class="keyword">else</span></pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-26">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>Global</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>  window.Bucky = exportDef()</pre></div></div>
+            
+        </li>
+        
+    </ul>
+  </div>
+</body>
+</html>
