@@ -114,17 +114,14 @@
       Bucky.send('data.point', 4);
       Bucky.flush();
       expect(server.requests.length).toBe(1);
-      return expect(JSON.parse(server.requests[0].requestBody)['data.point']).toBe("4.000|g");
+      return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
     });
     return it('should send timers', function() {
-      var body;
       Bucky.send('data.1', 5, 'timer');
       Bucky.send('data.2', 3, 'timer');
       Bucky.flush();
-      body = JSON.parse(server.requests[0].requestBody);
-      expect(body['data.1']).toBe("5.000|ms");
-      expect(body['data.2']).toBe("3.000|ms");
-      return expect(server.requests.length).toBe(1);
+      expect(server.requests.length).toBe(1);
+      return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
     });
   });
 

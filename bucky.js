@@ -12,7 +12,6 @@
       return (time[0] + time[1] / 1e9) * 1000;
     };
   } else {
-    XMLHttpRequest = window.XMLHttpRequest;
     now = function() {
       var _ref, _ref1;
       return (_ref = (_ref1 = window.performance) != null ? typeof _ref1.now === "function" ? _ref1.now() : void 0 : void 0) != null ? _ref : +(new Date);
@@ -146,8 +145,8 @@
       }
     };
     makeRequest = function(data) {
-      var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val;
-      corsSupport = isServer || (XMLHttpRequest && (XMLHttpRequest.defake || 'withCredentials' in new XMLHttpRequest()));
+      var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
+      corsSupport = isServer || (window.XMLHttpRequest && (window.XMLHttpRequest.defake || 'withCredentials' in new window.XMLHttpRequest()));
       if (isServer) {
         sameOrigin = true;
       } else {
@@ -172,7 +171,7 @@
       if (!sameOrigin && !corsSupport && ((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null)) {
         req = new window.XDomainRequest;
       } else {
-        req = new XMLHttpRequest;
+        req = new ((_ref3 = typeof window !== "undefined" && window !== null ? window.XMLHttpRequest : void 0) != null ? _ref3 : XMLHttpRequest);
       }
       req.bucky = {
         track: false
@@ -377,7 +376,6 @@
         }
         if (!path || path === true) {
           path = requests.urlToKey(document.location.toString()) + '.page';
-          console.log(path);
         }
         if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {
           if (typeof document.addEventListener === "function") {
@@ -459,12 +457,10 @@
         },
         urlToKey: function(url, type, root) {
           var host, mapping, mappingName, parsedUrl, path, stat, _j, _len1, _ref3, _ref4;
-          console.log(url);
           url = url.replace(/https?:\/\//i, '');
           parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url);
           host = parsedUrl[1];
           path = (_ref3 = parsedUrl[2]) != null ? _ref3 : '';
-          console.log(parsedUrl);
           _ref4 = requests.transforms.enabled;
           for (_j = 0, _len1 = _ref4.length; _j < _len1; _j++) {
             mappingName = _ref4[_j];
@@ -480,14 +476,11 @@
             if (mapping instanceof RegExp) {
               mapping = [mapping, ''];
             }
-            console.log('before', path);
             path = path.replace(mapping[0], mapping[1]);
-            console.log('after', mappingName, path);
           }
           path = decodeURIComponent(path);
           path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_');
           stat = host + path.replace(/[\/ ]/g, '.');
-          console.log(stat);
           stat = stat.replace(/(^\.)|(\.$)/g, '');
           stat = stat.replace(/\.com/, '');
           stat = stat.replace(/www\./, '');

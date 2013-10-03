@@ -8,8 +8,6 @@ if isServer
     (time[0] + time[1] / 1e9) * 1000
 
 else
-  XMLHttpRequest = window.XMLHttpRequest
-
   now = ->
     window.performance?.now?() ? (+new Date)
 
@@ -156,7 +154,7 @@ exportDef = ->
       maxTimeout = setTimeout flush, options.maxInterval
 
   makeRequest = (data) ->
-    corsSupport = isServer or (XMLHttpRequest and (XMLHttpRequest.defake or 'withCredentials' of new XMLHttpRequest()))
+    corsSupport = isServer or (window.XMLHttpRequest and (window.XMLHttpRequest.defake or 'withCredentials' of new window.XMLHttpRequest()))
 
     if isServer
       sameOrigin = true
@@ -186,7 +184,7 @@ exportDef = ->
       # CORS support for IE9
       req = new window.XDomainRequest
     else
-      req = new XMLHttpRequest
+      req = new (window?.XMLHttpRequest ? XMLHttpRequest)
 
     # Don't track this request with Bucky, as we'd be tracking our own
     # sends forever.  The latency of this request is independently tracked
@@ -373,7 +371,6 @@ exportDef = ->
 
       if not path or path is true
         path = requests.urlToKey(document.location.toString()) + '.page'
-        console.log path
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
@@ -436,13 +433,11 @@ exportDef = ->
           timer.send "#{ path }.#{ status }", val
 
       urlToKey: (url, type, root) ->
-        console.log url
         url = url.replace /https?:\/\//i, ''
 
         parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url)
         host = parsedUrl[1]
         path = parsedUrl[2] ? ''
-        console.log parsedUrl
 
         for mappingName in requests.transforms.enabled
           mapping = requests.transforms.mapping[mappingName]
@@ -458,16 +453,13 @@ exportDef = ->
           if mapping instanceof RegExp
             mapping = [mapping, '']
 
-          console.log 'before', path
           path = path.replace(mapping[0], mapping[1])
-          console.log 'after', mappingName, path
 
         path = decodeURIComponent(path)
 
         path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_')
 
         stat = host + path.replace(/[\/ ]/g, '.')
-        console.log stat
 
         stat = stat.replace /(^\.)|(\.$)/g, ''
         stat = stat.replace /\.com/, ''
