@@ -2,7 +2,7 @@
   "name": "bucky",
   "repo": "HubSpot/bucky",
   "description": "Collect performance data from the client",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "homepage": "http://github.hubspot.com/BuckyClient",
   "license": "MIT",
   "keywords": [
