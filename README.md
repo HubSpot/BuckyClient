@@ -9,13 +9,13 @@ various functions take to run.  Most importantly, it's taking the measurements o
 so the data has the potential to be much more valuable than in vitro measurements.
 
 If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you're not
-collecting stats, you [should start](https://github.com/HubSpot/BuckyServer/blob/master/docs/start-no-stats.md)!
+collecting stats, you [should start](http://github.hubspot.com/BuckyServer/getting_started/choosing_a_stats_service/)!
 What gets measured gets managed.
 
 ### Server
 
 You can play with Bucky just using the client, but if you'd like to start collecting data, see the
-[Server Instructions](http://github.com/HubSpot/BuckyServer).
+[Server Instructions](http://github.hubspot.com/BuckyServer/).
 
 ### Setup
 
