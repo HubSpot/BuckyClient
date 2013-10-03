@@ -52,7 +52,7 @@
   };
 
   exportDef = function() {
-    var ACTIVE, HISTORY, TYPE_MAP, considerSending, currentLatency, defaults, enqueue, flush, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, updateActive, updateLatency;
+    var $tag, ACTIVE, HISTORY, TYPE_MAP, client, considerSending, currentLatency, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -62,7 +62,27 @@
       sample: 1,
       active: true
     };
-    options = extend({}, defaults);
+    tagOptions = {};
+    if (!isServer) {
+      $tag = document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]');
+      if ($tag) {
+        tagOptions = {
+          host: $tag.getAttribute('data-bucky-host'),
+          pagePerformanceKey: $tag.getAttribute('data-bucky-page'),
+          requestsKey: $tag.getAttribute('data-bucky-requests')
+        };
+        _ref = ['pagePerformanceKey', 'requestsKey'];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          key = _ref[_i];
+          if (((_ref1 = tagOptions[key]) != null ? _ref1.toString().toLowerCase() : void 0) === 'true' || tagOptions[key] === '') {
+            tagOptions[key] = true;
+          } else if (((_ref2 = tagOptions[key]) != null ? _ref2.toString().toLowerCase : void 0) === 'false') {
+            tagOptions[key] = null;
+          }
+        }
+      }
+    }
+    options = extend({}, defaults, tagOptions);
     TYPE_MAP = {
       'timer': 'ms',
       'gauge': 'g',
@@ -88,7 +108,7 @@
     };
     queue = {};
     enqueue = function(path, value, type) {
-      var count, _ref;
+      var count, _ref3;
       if (!ACTIVE) {
         return;
       }
@@ -97,7 +117,7 @@
         if (type === 'counter') {
           value += queue[path].value;
         } else {
-          count = (_ref = queue[path].count) != null ? _ref : count;
+          count = (_ref3 = queue[path].count) != null ? _ref3 : count;
           count++;
           value = queue[path].value + (value - queue[path].value) / count;
         }
@@ -166,7 +186,7 @@
       return req;
     };
     sendQueue = function() {
-      var key, out, point, value, _ref;
+      var out, point, value, _ref3;
       if (!ACTIVE) {
         log("Would send bucky queue");
         return;
@@ -185,7 +205,7 @@
           continue;
         }
         value = point.value;
-        if ((_ref = point.type) === 'gauge' || _ref === 'timer') {
+        if ((_ref3 = point.type) === 'gauge' || _ref3 === 'timer') {
           value = round(value);
         }
         out[key] = "" + value + "|" + TYPE_MAP[point.type];
@@ -209,7 +229,7 @@
       }
     };
     makeClient = function(prefix) {
-      var buildPath, count, exports, key, nextMakeClient, requests, send, sendPerformanceData, sentPerformanceData, timer, val;
+      var buildPath, count, exports, nextMakeClient, requests, send, sendPagePerformance, sentPerformanceData, timer, val;
       if (prefix == null) {
         prefix = '';
       }
@@ -329,12 +349,12 @@
           return timer.send(path, time - start);
         },
         navigationStart: function() {
-          var _ref, _ref1, _ref2;
-          return (_ref = typeof window !== "undefined" && window !== null ? (_ref1 = window.performance) != null ? (_ref2 = _ref1.timing) != null ? _ref2.navigationStart : void 0 : void 0 : void 0) != null ? _ref : initTime;
+          var _ref3, _ref4, _ref5;
+          return (_ref3 = typeof window !== "undefined" && window !== null ? (_ref4 = window.performance) != null ? (_ref5 = _ref4.timing) != null ? _ref5.navigationStart : void 0 : void 0 : void 0) != null ? _ref3 : initTime;
         },
         responseEnd: function() {
-          var _ref, _ref1, _ref2;
-          return (_ref = typeof window !== "undefined" && window !== null ? (_ref1 = window.performance) != null ? (_ref2 = _ref1.timing) != null ? _ref2.responseEnd : void 0 : void 0 : void 0) != null ? _ref : initTime;
+          var _ref3, _ref4, _ref5;
+          return (_ref3 = typeof window !== "undefined" && window !== null ? (_ref4 = window.performance) != null ? (_ref5 = _ref4.timing) != null ? _ref5.responseEnd : void 0 : void 0 : void 0) != null ? _ref3 : initTime;
         },
         now: function() {
           return now();
@@ -347,31 +367,32 @@
         return send(path, count, 'counter');
       };
       sentPerformanceData = false;
-      sendPerformanceData = function(path) {
-        var key, start, time, _ref, _ref1, _ref2,
+      sendPagePerformance = function(path) {
+        var start, time, _ref3, _ref4, _ref5,
           _this = this;
-        if (path == null) {
-          path = 'timing';
-        }
-        if ((typeof window !== "undefined" && window !== null ? (_ref = window.performance) != null ? _ref.timing : void 0 : void 0) == null) {
+        if ((typeof window !== "undefined" && window !== null ? (_ref3 = window.performance) != null ? _ref3.timing : void 0 : void 0) == null) {
           return false;
         }
         if (sentPerformanceData) {
           return false;
         }
-        if ((_ref1 = document.readyState) === 'uninitialized' || _ref1 === 'loading') {
+        if (!path || path === true) {
+          path = requests.urlToKey(document.location.toString()) + '.page';
+          console.log(path);
+        }
+        if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {
           if (typeof document.addEventListener === "function") {
             document.addEventListener('DOMContentLoaded', function() {
-              return sendPerformanceData.call(_this, path);
+              return sendPagePerformance.call(_this, path);
             }, false);
           }
           return false;
         }
         sentPerformanceData = true;
         start = window.performance.timing.navigationStart;
-        _ref2 = window.performance.timing;
-        for (key in _ref2) {
-          time = _ref2[key];
+        _ref5 = window.performance.timing;
+        for (key in _ref5) {
+          time = _ref5[key];
           if (time) {
             timer.send("" + path + "." + key, time - start);
           }
@@ -386,7 +407,7 @@
             md5: /\/[0-9a-f]{32}/ig,
             id: /\/[0-9;_\-]+/g,
             email: /\/[^/]+@[^/]+/g,
-            domain: /\/[^/]+\.[a-z]{2,3}/ig
+            domain: [/\/[^/]+\.[a-z]{2,3}\//ig, '/']
           },
           enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain'],
           enable: function(name, test, replacement) {
@@ -399,10 +420,10 @@
             return this.enabled.splice(0, 0, name);
           },
           disable: function(name) {
-            var i, val, _ref;
-            _ref = this.enabled;
-            for (val in _ref) {
-              i = _ref[val];
+            var i, val, _ref3;
+            _ref3 = this.enabled;
+            for (val in _ref3) {
+              i = _ref3[val];
               if (val === name) {
                 this.enabled.splice(i, 1);
                 return;
@@ -438,14 +459,16 @@
           return _results;
         },
         urlToKey: function(url, type, root) {
-          var host, mapping, mappingName, parsedUrl, path, stat, _i, _len, _ref, _ref1;
+          var host, mapping, mappingName, parsedUrl, path, stat, _j, _len1, _ref3, _ref4;
+          console.log(url);
           url = url.replace(/https?:\/\//i, '');
           parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url);
           host = parsedUrl[1];
-          path = (_ref = parsedUrl[2]) != null ? _ref : '';
-          _ref1 = requests.transforms.enabled;
-          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-            mappingName = _ref1[_i];
+          path = (_ref3 = parsedUrl[2]) != null ? _ref3 : '';
+          console.log(parsedUrl);
+          _ref4 = requests.transforms.enabled;
+          for (_j = 0, _len1 = _ref4.length; _j < _len1; _j++) {
+            mappingName = _ref4[_j];
             mapping = requests.transforms.mapping[mappingName];
             if (mapping == null) {
               log.error("Bucky Error: Attempted to enable a mapping which is not defined: " + mappingName);
@@ -458,11 +481,14 @@
             if (mapping instanceof RegExp) {
               mapping = [mapping, ''];
             }
+            console.log('before', path);
             path = path.replace(mapping[0], mapping[1]);
+            console.log('after', mappingName, path);
           }
           path = decodeURIComponent(path);
           path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_');
           stat = host + path.replace(/[\/ ]/g, '.');
+          console.log(stat);
           stat = stat.replace(/(^\.)|(\.$)/g, '');
           stat = stat.replace(/\.com/, '');
           stat = stat.replace(/www\./, '');
@@ -489,13 +515,13 @@
         },
         monitor: function(root) {
           var done, self, _XMLHttpRequest;
-          if (root == null) {
-            root = 'requests';
+          if (!root || root === true) {
+            root = requests.urlToKey(document.location.toString()) + '.requests';
           }
           self = this;
           done = function(_arg) {
-            var dur, event, request, startTime, stat, type, url;
-            type = _arg.type, url = _arg.url, event = _arg.event, request = _arg.request, startTime = _arg.startTime;
+            var dur, event, readyStateTimes, request, startTime, stat, type, url;
+            type = _arg.type, url = _arg.url, event = _arg.event, request = _arg.request, readyStateTimes = _arg.readyStateTimes, startTime = _arg.startTime;
             if (startTime != null) {
               dur = now() - startTime;
             } else {
@@ -580,15 +606,12 @@
         timer: timer,
         now: now,
         requests: requests,
-        sendPerformanceData: sendPerformanceData,
+        sendPagePerformance: sendPagePerformance,
         flush: flush,
         setOptions: setOptions,
         options: options,
         history: HISTORY,
-        active: ACTIVE,
-        enableAjaxMonitoring: function() {
-          return requests.monitor.apply(requests, arguments);
-        }
+        active: ACTIVE
       };
       for (key in exports) {
         val = exports[key];
@@ -596,7 +619,14 @@
       }
       return nextMakeClient;
     };
-    return makeClient();
+    client = makeClient();
+    if (options.pagePerformanceKey) {
+      client.sendPagePerformance(options.pagePerformanceKey);
+    }
+    if (options.requestsKey) {
+      client.requests.monitor(options.requestsKey);
+    }
+    return client;
   };
 
   if (typeof define === 'function' && define.amd) {

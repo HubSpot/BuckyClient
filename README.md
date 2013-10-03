@@ -21,13 +21,22 @@ You can play with Bucky just using the client, but if you'd like to start collec
 
 #### From The Client
 
-Include `BuckyClient/bucky.js` file on your page
+Include `BuckyClient/bucky.js` file on your page, the most important config can be done right in the script tag:
 
-The `Bucky` object will be available globally.
+```html
+<script src="bucky.js" data-bucky-host="/bucky" data-bucky-page data-bucky-requests></script>
+```
 
-Bucky can also be loaded with AMD or Browserify.
+That config will automatically log the performance of your page and all the requests you make to a server running at
+/bucky.  It will automatically decide the right key name based on the url of the page.  If you'd like, you can also specify it manually:
 
-Here is [an example](http://github.hubspot.com/BuckyClient/quickstart) of what you should do as early in the loading process as is possible.
+```html
+<script src="bucky.js" data-bucky-host="/bucky" data-bucky-page="index" data-bucky-requests="index"></script>
+```
+
+The `Bucky` object will be available globally, but there is nothing you need to call for basic usage.
+
+Bucky can also be loaded with AMD or Browserify (see the methods below).
 
 #### From Node
 
@@ -41,7 +50,7 @@ bucky = require('bucky')
 
 ### Configuring
 
-Before sending any data, call `setOptions`:
+Before sending any data, call `setOptions` if you're not using the data- attribute based configuration:
 
 ```javascript
 Bucky.setOptions({
@@ -71,8 +80,10 @@ one go.  It won't do anything on browsers which don't support the performance.ti
 it will bind an event if the data isn't ready yet.
 
 ```coffeescript
-Bucky.sendPerformanceData('where.the.data.should.go')
+Bucky.sendPagePerformance('where.the.data.should.go')
 ```
+
+Setting `data-bucky-page` triggers this automatically.
 
 The two most relevant stats provided are `responseEnd` which is the amount of time it took for the
 original page to be loaded and `domInteractive` which is the amount of time before the page has
@@ -86,7 +97,7 @@ If you're using Backbone, it might be a good idea to send your data based on rou
 ```coffeescript
 Backbone.history.on 'route', (router, route) ->
    # Will only send on the initial page load:
-   Bucky.sendPerformanceData("some.location.page.#{ route }")
+   Bucky.sendPagePerformance("some.location.page.#{ route }")
 ```
 
 The data collected will look something like this:
@@ -119,6 +130,8 @@ on the url to try and create a graphite key from it.  Enable it as early in your
 ```coffeescript
 Bucky.requests.monitor('my.project.requests')
 ```
+
+Setting `data-bucky-requests` calls this automatically.
 
 The data collected will look something like this for a GET request to
 `api.hubapi.com/automation/v2/workflows`:

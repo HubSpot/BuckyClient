@@ -65,8 +65,27 @@ exportDef = ->
 
     # Set to false to disable sends (in dev mode for example)
     active: true
+
+  tagOptions = {}
+  if not isServer
+    $tag = document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]')
+    if $tag
+      tagOptions = {
+        host: $tag.getAttribute('data-bucky-host')
+
+        # These are to allow you to send page peformance data without having to manually call
+        # the methods.
+        pagePerformanceKey: $tag.getAttribute('data-bucky-page')
+        requestsKey: $tag.getAttribute('data-bucky-requests')
+      }
+
+      for key in ['pagePerformanceKey', 'requestsKey']
+        if tagOptions[key]?.toString().toLowerCase() is 'true' or tagOptions[key] is ''
+          tagOptions[key] = true
+        else if tagOptions[key]?.toString().toLowerCase is 'false'
+          tagOptions[key] = null
    
-  options = extend {}, defaults
+  options = extend {}, defaults, tagOptions
     
   TYPE_MAP =
     'timer': 'ms'
@@ -349,14 +368,18 @@ exportDef = ->
       send(path, count, 'counter')
 
     sentPerformanceData = false
-    sendPerformanceData = (path='timing') ->
+    sendPagePerformance = (path) ->
       return false unless window?.performance?.timing?
       return false if sentPerformanceData
+
+      if not path or path is true
+        path = requests.urlToKey(document.location.toString()) + '.page'
+        console.log path
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
         document.addEventListener? 'DOMContentLoaded', =>
-          sendPerformanceData.call(@, path)
+          sendPagePerformance.call(@, path)
         , false
 
         return false
@@ -377,7 +400,7 @@ exportDef = ->
           md5: /\/[0-9a-f]{32}/ig
           id: /\/[0-9;_\-]+/g
           email: /\/[^/]+@[^/]+/g
-          domain: /\/[^/]+\.[a-z]{2,3}/ig
+          domain: [/\/[^/]+\.[a-z]{2,3}\//ig, '/']
 
         enabled: ['guid', 'sha1', 'md5', 'id', 'email', 'domain']
 
@@ -414,11 +437,13 @@ exportDef = ->
           timer.send "#{ path }.#{ status }", val
 
       urlToKey: (url, type, root) ->
+        console.log url
         url = url.replace /https?:\/\//i, ''
 
         parsedUrl = /([^/:]*)(?::\d+)?(\/[^\?#]*)?.*/i.exec(url)
         host = parsedUrl[1]
         path = parsedUrl[2] ? ''
+        console.log parsedUrl
 
         for mappingName in requests.transforms.enabled
           mapping = requests.transforms.mapping[mappingName]
@@ -433,14 +458,17 @@ exportDef = ->
 
           if mapping instanceof RegExp
             mapping = [mapping, '']
-    
+
+          console.log 'before', path
           path = path.replace(mapping[0], mapping[1])
+          console.log 'after', mappingName, path
 
         path = decodeURIComponent(path)
 
         path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_')
 
         stat = host + path.replace(/[\/ ]/g, '.')
+        console.log stat
 
         stat = stat.replace /(^\.)|(\.$)/g, ''
         stat = stat.replace /\.com/, ''
@@ -464,9 +492,12 @@ exportDef = ->
         else
           url
 
-      monitor: (root='requests') ->
+      monitor: (root) ->
+        if not root or root is true
+          root = requests.urlToKey(document.location.toString()) + '.requests'
+
         self = this
-        done = ({type, url, event, request, startTime}) ->
+        done = ({type, url, event, request, readyStateTimes, startTime}) ->
           if startTime?
             dur = now() - startTime
           else
@@ -542,14 +573,12 @@ exportDef = ->
       timer,
       now,
       requests,
-      sendPerformanceData,
+      sendPagePerformance,
       flush,
       setOptions,
       options,
       history: HISTORY,
-      active: ACTIVE,
-      enableAjaxMonitoring: ->
-        requests.monitor.apply requests, arguments
+      active: ACTIVE
     }
 
     for key, val of exports
@@ -557,7 +586,15 @@ exportDef = ->
 
     nextMakeClient
 
-  makeClient()
+  client = makeClient()
+
+  if options.pagePerformanceKey
+    client.sendPagePerformance(options.pagePerformanceKey)
+
+  if options.requestsKey
+    client.requests.monitor(options.requestsKey)
+
+  client
 
 if typeof define is 'function' and define.amd
   # AMD
