@@ -21,7 +21,7 @@ You can play with Bucky just using the client, but if you'd like to start collec
 
 #### From The Client
 
-Include `BuckyClient/bucky.js` file on your page, the most important config can be done right in the script tag:
+Include [bucky.js](https://raw.github.com/HubSpot/BuckyClient/v0.2.2/bucky.min.js) on your page, the only required config can be done right in the script tag:
 
 ```html
 <script src="bucky.js" data-bucky-host="/bucky" data-bucky-page data-bucky-requests></script>
