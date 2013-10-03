@@ -1,2 +1,3 @@
 name: "Bucky Client"
+source: "bucky.coffee"
 assets: "bucky.js"
