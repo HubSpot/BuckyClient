@@ -122,7 +122,7 @@ pages.contactDetail.timing.responseStart: "235.000|ms"
 pages.contactDetail.timing.secureConnectionStart: "106.000|ms"
 ```
 
-A description of what each datapoint represents is included in [the spec](http://www.w3.org/TR/2012/PR-navigation-timing-20120726/#sec-navigation-timing-interface).
+A description of what each datapoint represents is included in [the spec](http://www.w3.org/TR/navigation-timing-2/#sec-PerformanceNavigationTiming).
 
 #### Sending AJAX Request Time
 
