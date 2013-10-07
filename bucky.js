@@ -63,7 +63,7 @@
     };
     tagOptions = {};
     if (!isServer) {
-      $tag = document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]');
+      $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]') : void 0;
       if ($tag) {
         tagOptions = {
           host: $tag.getAttribute('data-bucky-host'),

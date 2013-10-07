@@ -122,6 +122,8 @@ pages.contactDetail.timing.responseStart: "235.000|ms"
 pages.contactDetail.timing.secureConnectionStart: "106.000|ms"
 ```
 
+A description of what each datapoint represents is included in [the spec](http://www.w3.org/TR/2012/PR-navigation-timing-20120726/#sec-navigation-timing-interface).
+
 #### Sending AJAX Request Time
 
 Bucky can automatically log all ajax requests made by hooking into XMLHttpRequest and doing some transformations
