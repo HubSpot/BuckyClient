@@ -217,7 +217,6 @@
     };
     latencySent = false;
     updateLatency = function(time) {
-      Bucky.latency = time;
       if (options.sendLatency && !latencySent) {
         enqueue('bucky.latency', time, 'timer');
         latencySent = true;

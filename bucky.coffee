@@ -235,8 +235,6 @@ exportDef = ->
 
   latencySent = false
   updateLatency = (time) ->
-    Bucky.latency = time
-
     if options.sendLatency and not latencySent
       enqueue 'bucky.latency', time, 'timer'
 

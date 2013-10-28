@@ -1,6 +1,6 @@
 {
   "name": "bucky",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Collect performance data from the client and node",
   "main": "./bucky.js",
   "dependencies": {
