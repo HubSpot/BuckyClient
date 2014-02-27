@@ -278,7 +278,7 @@ on the server where you might be pushing out many points with the same key).
 
 The Bucky object provides a couple extra properties you can access:
 
-- `Bucky.history`: The history of all datapoints ever send.
+- `Bucky.history`: The history of all datapoints ever sent.
 - `Bucky.active`: Is Bucky sending data?  This can change if you change the `active` or `sample` settings.
 - `Bucky.flush()`: Send the Bucky queue immediately
 - `Bucky.timer.now()`: A clock based on the most precise time available (not guarenteed to be from the epoch)
