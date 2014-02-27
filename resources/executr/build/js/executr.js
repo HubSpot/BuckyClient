@@ -173,11 +173,11 @@
       codeType = this.getType();
       this.$el.trigger('executrBeforeExecute', [code, codeType, this.opts]);
       if (this.opts.setUp != null) {
-        this.opts.setUp(codeType, this.opts);
+        this.opts.setUp.call(this.$el, codeType, this.opts);
       }
       output = this.run(codeType, this.opts, code);
       if (this.opts.tearDown != null) {
-        this.opts.tearDown(output, codeType, this.opts);
+        this.opts.tearDown.call(this.$el, output, codeType, this.opts);
       }
       this.$el.trigger('executrAfterExecute', [output, code, codeType, this.opts]);
       return insertOutput(this.opts, output);
@@ -230,6 +230,7 @@
     return $('.executr-switch').click(function() {
       var $this, codeType;
       $this = $(this);
+      $this.addClass('selected').siblings().removeClass('selected');
       codeType = $this.attr('data-code-type');
       return codeSelectors.trigger('executrSwitchType', codeType);
     });
