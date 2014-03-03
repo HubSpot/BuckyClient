@@ -16,7 +16,7 @@ else
 initTime = +new Date
 
 extend = (a, objs...) ->
-  for obj in objs.reverse()
+  for obj in objs
     for key, val of obj
       a[key] = val
   a
