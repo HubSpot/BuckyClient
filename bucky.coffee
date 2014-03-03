@@ -37,6 +37,12 @@ exportDef = ->
     # Keep in mind that if you use a different host, CORS will come into play.
     host: '/bucky'
 
+    # The path on the server to send the data to
+    path: '/v1/send'
+
+    # The format in which to send the data
+    format: 'text/plain'
+
     # The max time we should wait between sends
     maxInterval: 30000
 
@@ -66,10 +72,13 @@ exportDef = ->
 
   tagOptions = {}
   if not isServer
-    $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests]')
+    selector = "[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-path],[data-bucky-format]"
+    $tag = document.querySelector?(selector)
     if $tag
       tagOptions = {
         host: $tag.getAttribute('data-bucky-host')
+        path: $tag.getAttribute('data-bucky-path')
+        format: $tag.getAttribute('data-bucky-format')
 
         # These are to allow you to send page peformance data without having to manually call
         # the methods.
@@ -83,8 +92,7 @@ exportDef = ->
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
    
-  options = extend {}, defaults, tagOptions
-    
+  options = extend {}, tagOptions, defaults
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -176,9 +184,12 @@ exportDef = ->
 
     sendStart = now()
   
-    body = ''
-    for name, val of data
-      body += "#{ name }:#{ val }\n"
+    if 'text/plain' == options.format
+      body = ''
+      for name, val of data
+        body += "#{ name }:#{ val }\n"
+    else if 'application/json' == options.format
+      body = JSON.stringify(data)
 
     if not sameOrigin and not corsSupport and window?.XDomainRequest?
       # CORS support for IE9
@@ -191,9 +202,9 @@ exportDef = ->
     # by updateLatency.
     req.bucky = {track: false}
 
-    req.open 'POST', "#{ options.host }/v1/send", true
+    req.open 'POST', options.host + (options.path or ''), true
 
-    req.setRequestHeader 'Content-Type', 'text/plain'
+    req.setRequestHeader 'Content-Type', options.format
 
     req.addEventListener 'load', ->
       updateLatency(now() - sendStart)
@@ -224,11 +235,15 @@ exportDef = ->
       if point.type in ['gauge', 'timer']
         value = round(value)
 
-      out[key] = "#{ value }|#{ TYPE_MAP[point.type] }"
+      if 'text/plain' == options.format
+        out[key] = "#{ value }|#{ TYPE_MAP[point.type] }"
 
-      if point.count isnt 1
-        out[key] += "@#{ round(1 / point.count, 5) }"
-
+        if point.count isnt 1
+          out[key] += "@#{ round(1 / point.count, 5) }"
+      else if 'application/json' == options.format
+        out[point.type] or= {}
+        out[point.type][key] = {value: point.value}
+        out[point.type][key]['count'] = point.count if point.count isnt 1
     makeRequest out
 
     queue = {}
