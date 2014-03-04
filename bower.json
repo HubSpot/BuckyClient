@@ -1,0 +1,21 @@
+{
+  "name": "bucky",
+  "description": "Collect performance data from the client",
+  "version": "0.2.4",
+  "main": "bucky.js",
+  "homepage": "http://github.hubspot.com/bucky",
+  "author": "Zack Bloom <zackbloom@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:HubSpot/BuckyClient.git"
+  },
+  "keywords": [
+    "client-side",
+    "statistics",
+    "data",
+    "graphite",
+    "bucky",
+    "OpenTSDB"
+  ]
+}
