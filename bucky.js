@@ -418,8 +418,8 @@
           disable: function(name) {
             var i, val, _ref3;
             _ref3 = this.enabled;
-            for (val in _ref3) {
-              i = _ref3[val];
+            for (i in _ref3) {
+              val = _ref3[i];
               if (val === name) {
                 this.enabled.splice(i, 1);
                 return;

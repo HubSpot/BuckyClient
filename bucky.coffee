@@ -406,7 +406,7 @@ exportDef = ->
           @enabled.splice 0, 0, name
 
         disable: (name) ->
-          for val, i of @enabled
+          for i, val of @enabled
             if val is name
               @enabled.splice i, 1
               return
