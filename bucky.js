@@ -21,11 +21,10 @@
   initTime = +(new Date);
 
   extend = function() {
-    var a, key, obj, objs, val, _i, _len, _ref;
+    var a, key, obj, objs, val, _i, _len;
     a = arguments[0], objs = 2 <= arguments.length ? __slice.call(arguments, 1) : [];
-    _ref = objs.reverse();
-    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-      obj = _ref[_i];
+    for (_i = 0, _len = objs.length; _i < _len; _i++) {
+      obj = objs[_i];
       for (key in obj) {
         val = obj[key];
         a[key] = val;
@@ -232,9 +231,10 @@
       }
       buildPath = function(path) {
         if (prefix != null ? prefix.length : void 0) {
-          prefix + '.' + path;
+          return prefix + '.' + path;
+        } else {
+          return path;
         }
-        return path;
       };
       send = function(path, value, type) {
         if (type == null) {
