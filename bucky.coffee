@@ -250,7 +250,8 @@ exportDef = ->
     buildPath = (path) ->
       if prefix?.length
         prefix + '.' + path
-      path
+      else
+        path
 
     send = (path, value, type='gauge') ->
       if not value? or not path?
