@@ -372,9 +372,11 @@ exportDef = ->
         path = requests.urlToKey(document.location.toString()) + '.page'
 
       if document.readyState in ['uninitialized', 'loading']
-        # The data isn't fully ready until document load
-        document.addEventListener? 'DOMContentLoaded', =>
-          sendPagePerformance.call(@, path)
+        # The data isn't fully ready until window load
+        window.addEventListener? 'load', =>
+          setTimeout ->
+              sendPagePerformance.call(@, path)
+            ,500
         , false
 
         return false
