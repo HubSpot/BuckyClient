@@ -382,7 +382,7 @@ exportDef = ->
       sentPerformanceData = true
 
       start = window.performance.timing.navigationStart
-      for key, time of window.performance.timing when time
+      for key, time of window.performance.timing when typeof time is 'number'
         timer.send "#{ path }.#{ key }", (time - start)
 
       return true
