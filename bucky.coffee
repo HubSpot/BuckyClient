@@ -373,8 +373,10 @@ exportDef = ->
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
-        document.addEventListener? 'DOMContentLoaded', =>
-          sendPagePerformance.call(@, path)
+        window.addEventListener? 'load', =>
+          setTimeout =>
+            sendPagePerformance.call(@, path)
+          , 500
         , false
 
         return false

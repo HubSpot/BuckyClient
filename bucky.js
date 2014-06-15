@@ -377,9 +377,11 @@
           path = requests.urlToKey(document.location.toString()) + '.page';
         }
         if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {
-          if (typeof document.addEventListener === "function") {
-            document.addEventListener('DOMContentLoaded', function() {
-              return sendPagePerformance.call(_this, path);
+          if (typeof window.addEventListener === "function") {
+            window.addEventListener('load', function() {
+              return setTimeout(function() {
+                return sendPagePerformance.call(_this, path);
+              }, 500);
             }, false);
           }
           return false;
