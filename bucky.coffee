@@ -82,9 +82,9 @@ exportDef = ->
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
-   
+
   options = extend {}, defaults, tagOptions
-    
+
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -171,11 +171,11 @@ exportDef = ->
           sameOrigin = false
       else
         # Relative URL
-        
+
         sameOrigin = true
 
     sendStart = now()
-  
+
     body = ''
     for name, val of data
       body += "#{ name }:#{ val }\n"
@@ -227,7 +227,7 @@ exportDef = ->
       out[key] = "#{ value }|#{ TYPE_MAP[point.type] }"
 
       if point.count isnt 1
-        out[key] += "@#{ round(1 / point.count, 5) }"
+        out[key] += "|@#{ round(1 / point.count, 5) }"
 
     makeRequest out
 
