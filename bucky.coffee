@@ -460,10 +460,10 @@ exportDef = ->
 
         path = path.replace(/[^a-zA-Z0-9\-\.\/ ]+/g, '_')
 
+        host = host.replace(/\.com.*/, '')
         stat = host + path.replace(/[\/ ]/g, '.')
 
         stat = stat.replace /(^\.)|(\.$)/g, ''
-        stat = stat.replace /\.com/, ''
         stat = stat.replace /www\./, ''
 
         if root

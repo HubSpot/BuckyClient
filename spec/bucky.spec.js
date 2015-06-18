@@ -73,6 +73,9 @@
     it('should strip .com and www.', function() {
       return expect(utk('http://www.google.com/test/site')).toBe('google.test.site');
     });
+    it('should strip domain extensions', function() {
+      return expect(utk('http://www.mywebsite.com.br/test/site')).toBe('mywebsite.test.site');
+    });
     it('should add the passed in root', function() {
       return expect(utk('test/as', null, 'root')).toBe('root.test.as');
     });
