@@ -50,7 +50,7 @@
   };
 
   exportDef = function() {
-    var $tag, ACTIVE, HISTORY, TYPE_MAP, client, considerSending, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
+    var $tag, ACTIVE, EVENTS, HISTORY, TYPE_MAP, client, considerSending, defaults, enqueue, flush, key, latencySent, makeClient, makeRequest, maxTimeout, options, queue, round, sendQueue, sendTimeout, setOptions, tagOptions, updateActive, updateLatency, _i, _len, _ref, _ref1, _ref2;
     defaults = {
       host: '/bucky',
       maxInterval: 30000,
@@ -91,6 +91,7 @@
       return ACTIVE = options.active && Math.random() < options.sample;
     })();
     HISTORY = [];
+    EVENTS = ['navigationStart', 'redirectStart', 'redirectEnd', 'fetchStart', 'domainLookupStart', 'domainLookupEnd', 'connectStart', 'connectEnd', 'secureConnectionStart', 'requestStart', 'responseStart', 'responseEnd', 'domLoading', 'domInteractive', 'domContentLoadedEventStart', 'domContentLoadedEventEnd', 'domComplete', 'loadEventStart', 'loadEventEnd'];
     setOptions = function(opts) {
       extend(options, opts);
       if ('sample' in opts || 'active' in opts) {
@@ -365,7 +366,7 @@
       };
       sentPerformanceData = false;
       sendPagePerformance = function(path) {
-        var start, time, _ref3, _ref4, _ref5,
+        var event, lastEvent, start, time, _j, _len1, _ref3, _ref4, _ref5,
           _this = this;
         if ((typeof window !== "undefined" && window !== null ? (_ref3 = window.performance) != null ? _ref3.timing : void 0 : void 0) == null) {
           return false;
@@ -391,8 +392,17 @@
         _ref5 = window.performance.timing;
         for (key in _ref5) {
           time = _ref5[key];
-          if (typeof time === 'number') {
+          if (typeof time === 'number' && key !== 'navigationStart') {
             timer.send("" + path + "." + key, time - start);
+          }
+        }
+        for (_j = 0, _len1 = EVENTS.length; _j < _len1; _j++) {
+          event = EVENTS[_j];
+          if (typeof window.performance.timing[event] === 'number' && window.performance.timing[event] > 0) {
+            if (typeof lastEvent !== 'undefined') {
+              timer.send("" + path + "." + event + ".delta", window.performance.timing[event] - window.performance.timing[lastEvent]);
+            }
+            lastEvent = event;
           }
         }
         return true;

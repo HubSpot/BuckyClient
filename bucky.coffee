@@ -82,9 +82,9 @@ exportDef = ->
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
-   
+
   options = extend {}, defaults, tagOptions
-    
+
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -95,6 +95,11 @@ exportDef = ->
     ACTIVE = options.active and Math.random() < options.sample
 
   HISTORY = []
+
+  EVENTS = ['navigationStart', 'redirectStart', 'redirectEnd', 'fetchStart', 'domainLookupStart', 'domainLookupEnd', \
+            'connectStart', 'connectEnd', 'secureConnectionStart', 'requestStart', 'responseStart', 'responseEnd', \
+            'domLoading', 'domInteractive', 'domContentLoadedEventStart', 'domContentLoadedEventEnd', \
+            'domComplete', 'loadEventStart', 'loadEventEnd']
 
   setOptions = (opts) ->
     extend options, opts
@@ -171,11 +176,11 @@ exportDef = ->
           sameOrigin = false
       else
         # Relative URL
-        
+
         sameOrigin = true
 
     sendStart = now()
-  
+
     body = ''
     for name, val of data
       body += "#{ name }:#{ val }\n"
@@ -384,8 +389,14 @@ exportDef = ->
       sentPerformanceData = true
 
       start = window.performance.timing.navigationStart
-      for key, time of window.performance.timing when typeof time is 'number'
+      for key, time of window.performance.timing when typeof time is 'number' and key != 'navigationStart'
         timer.send "#{ path }.#{ key }", (time - start)
+
+      for event in EVENTS
+        if typeof window.performance.timing[event] is 'number' and window.performance.timing[event] > 0
+          if typeof lastEvent != 'undefined'
+            timer.send "#{ path }.#{ event }.delta", (window.performance.timing[event] - window.performance.timing[lastEvent])
+          lastEvent = event
 
       return true
 
