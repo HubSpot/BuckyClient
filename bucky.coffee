@@ -82,9 +82,9 @@ exportDef = ->
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
-   
+
   options = extend {}, defaults, tagOptions
-    
+
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -171,11 +171,11 @@ exportDef = ->
           sameOrigin = false
       else
         # Relative URL
-        
+
         sameOrigin = true
 
     sendStart = now()
-  
+
     body = ''
     for name, val of data
       body += "#{ name }:#{ val }\n"
@@ -370,6 +370,8 @@ exportDef = ->
 
       if not path or path is true
         path = requests.urlToKey(document.location.toString()) + '.page'
+      else if path.indexOf(",") > -1
+        path += "url=" + requests.urlToKey(document.location.toString()) + ',data=page'
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
@@ -487,7 +489,8 @@ exportDef = ->
       monitor: (root) ->
         if not root or root is true
           root = requests.urlToKey(document.location.toString()) + '.requests'
-
+        else if root.indexOf(",") > -1
+          root += "url=" + requests.urlToKey(document.location.toString()) + ',data=requests'
         self = this
         done = ({type, url, event, request, readyStateTimes, startTime}) ->
           if startTime?

@@ -375,6 +375,8 @@
         }
         if (!path || path === true) {
           path = requests.urlToKey(document.location.toString()) + '.page';
+        } else if (path.indexOf(",") > -1) {
+          path += "url=" + requests.urlToKey(document.location.toString()) + ',data=page';
         }
         if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {
           if (typeof window.addEventListener === "function") {
@@ -510,6 +512,8 @@
           var done, self, _XMLHttpRequest;
           if (!root || root === true) {
             root = requests.urlToKey(document.location.toString()) + '.requests';
+          } else if (root.indexOf(",") > -1) {
+            root += "url=" + requests.urlToKey(document.location.toString()) + ',data=requests';
           }
           self = this;
           done = function(_arg) {
