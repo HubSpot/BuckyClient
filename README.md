@@ -8,7 +8,7 @@ It can automatically measure how long your pages take to load, how long AJAX req
 various functions take to run.  Most importantly, it's taking the measurements on actual page loads,
 so the data has the potential to be much more valuable than in vitro measurements.
 
-If you already use statsd or OpenTSDB, you can get started in just a few minutes.  If you're not
+If you already use statsd, OpenTSDB or InfluxDB, you can get started in just a few minutes.  If you're not
 collecting stats, you [should start](http://github.hubspot.com/BuckyServer/getting_started/choosing_a_stats_service/)!
 What gets measured gets managed.
 
@@ -103,23 +103,25 @@ Backbone.history.on 'route', (router, route) ->
 The data collected will look something like this:
 
 ```javascript
-pages.contactDetail.timing.connectEnd: "172.000|ms"
-pages.contactDetail.timing.connectStart: "106.000|ms"
-pages.contactDetail.timing.domComplete: "1029.000|ms"
-pages.contactDetail.timing.domContentLoadedEventEnd: "1019.000|ms"
-pages.contactDetail.timing.domContentLoadedEventStart: "980.000|ms"
-pages.contactDetail.timing.domInteractive: "980.000|ms"
-pages.contactDetail.timing.domLoading: "254.000|ms"
-pages.contactDetail.timing.domainLookupEnd: "106.000|ms"
-pages.contactDetail.timing.domainLookupStart: "106.000|ms"
-pages.contactDetail.timing.fetchStart: "103.000|ms"
-pages.contactDetail.timing.loadEventEnd: "1030.000|ms"
-pages.contactDetail.timing.loadEventStart: "1029.000|ms"
-pages.contactDetail.timing.navigationStart: "0.000|ms"
-pages.contactDetail.timing.requestStart: "173.000|ms"
-pages.contactDetail.timing.responseEnd: "243.000|ms"
-pages.contactDetail.timing.responseStart: "235.000|ms"
-pages.contactDetail.timing.secureConnectionStart: "106.000|ms"
+{
+  "pages.contactDetail.timing.connectEnd": "172.000|ms",
+  "pages.contactDetail.timing.connectStart": "106.000|ms",
+  "pages.contactDetail.timing.domComplete": "1029.000|ms",
+  "pages.contactDetail.timing.domContentLoadedEventEnd": "1019.000|ms",
+  "pages.contactDetail.timing.domContentLoadedEventStart": "980.000|ms",
+  "pages.contactDetail.timing.domInteractive": "980.000|ms",
+  "pages.contactDetail.timing.domLoading": "254.000|ms",
+  "pages.contactDetail.timing.domainLookupEnd": "106.000|ms",
+  "pages.contactDetail.timing.domainLookupStart": "106.000|ms",
+  "pages.contactDetail.timing.fetchStart": "103.000|ms",
+  "pages.contactDetail.timing.loadEventEnd": "1030.000|ms",
+  "pages.contactDetail.timing.loadEventStart": "1029.000|ms",
+  "pages.contactDetail.timing.navigationStart": "0.000|ms",
+  "pages.contactDetail.timing.requestStart": "173.000|ms",
+  "pages.contactDetail.timing.responseEnd": "243.000|ms",
+  "pages.contactDetail.timing.responseStart": "235.000|ms",
+  "pages.contactDetail.timing.secureConnectionStart": "106.000|ms"
+}
 ```
 
 A description of what each datapoint represents is included in [the spec](http://www.w3.org/TR/navigation-timing-2/#sec-PerformanceNavigationTiming).
@@ -139,13 +141,15 @@ The data collected will look something like this for a GET request to
 `api.hubapi.com/automation/v2/workflows`:
 
 ```javascript
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get: "656.794|ms"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.2xx: "1|c"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.200: "1|c"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.headers: "436.737|ms"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.receiving: "0.182|ms"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.sending: "0.059|ms"
-contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.waiting: "206.035|ms"
+{
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get": "656.794|ms",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.2xx": "1|c",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.200": "1|c",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.headers": "436.737|ms",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.receiving": "0.182|ms",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.sending": "0.059|ms",
+  "contacts.web.prod.requests.api.hubapi.automation.v2.workflows.get.waiting": "206.035|ms"
+}
 ```
 
 #### Prefixing
@@ -210,7 +214,7 @@ bucky.timer.timeSync 'my.awesome.function', ->
   Math.sqrt(100)
 ```
 
-The `time` and `timeSync` functions also accept a context and arguments to pass to the 
+The `time` and `timeSync` functions also accept a context and arguments to pass to the
 called function:
 
 ```coffeescript
@@ -270,7 +274,7 @@ You can find your stats in the `stats` and `stats.timing` folders in graphite, o
 Bucky will send your data in bulk from the client either five seconds after the last datapoint is added, or thirty seconds after
 the last send, whichever comes first.  If you log multiple datapoints within this send frequency, the points will
 be averaged (and the appropriate frequency information will be sent to statsd) (with the exception of counters, they
-are incremented).  This means that the max and min numbers you get from statsd actually represent the max and min 
+are incremented).  This means that the max and min numbers you get from statsd actually represent the max and min
 5-30 second bucket.  Note that this is per-client, not for the entire bucky process (it's generally only important
 on the server where you might be pushing out many points with the same key).
 

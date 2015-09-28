@@ -1,6 +1,6 @@
 {
   "name": "bucky",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "Collect performance data from the client",
   "main": "bucky.js",
   "homepage": "http://github.hubspot.com/bucky",

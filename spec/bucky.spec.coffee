@@ -39,7 +39,7 @@ describe 'urlToKey', ->
 
   it 'should add the method', ->
     expect(utk('x', 'GET')).toBe('x.get')
-    
+
   it 'should strip leading and trailing slashes', ->
     expect(utk('/a/b/c/')).toBe('a.b.c')
 
@@ -93,6 +93,8 @@ describe 'send', ->
   beforeEach ->
     server = sinon.fakeServer.create()
     server.autoRespond = true
+    Bucky.setOptions
+      json: false
 
   afterEach ->
     server.restore()
@@ -112,3 +114,23 @@ describe 'send', ->
     expect(server.requests.length).toBe(1)
 
     expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+
+  it 'should send a datapoint as JSON', ->
+    Bucky.setOptions
+      json: true
+    Bucky.send 'data.point', 4
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+    expect(server.requests[0].requestBody).toBe('{"data.point":"4|g"}')
+
+  it 'should send timers as JSON', ->
+    Bucky.setOptions
+      json: true
+    Bucky.send 'data.1', 5, 'timer'
+    Bucky.send 'data.2', 3, 'timer'
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+
+    expect(server.requests[0].requestBody).toBe('{"data.1":"5|ms","data.2":"3|ms"}')
