@@ -564,7 +564,7 @@ exportDef = ->
             return
 
           if options.influxLineProtocol is true
-            stat = "#{ root },url=#{ (escapeTag req._bucky.url) },method=#{ (escapeTag req._bucky.type) }"
+            stat = "#{ root },url=#{ (escapeTag req._bucky.url) },endpoint=#{ (escapeTag req._bucky.endpoint) },method=#{ (escapeTag req._bucky.type) }"
           else
             req._bucky.url = self.getFullUrl req._bucky.url
             stat = self.urlToKey req._bucky.url, req._bucky.type, root
@@ -610,7 +610,8 @@ exportDef = ->
               try
                 req._bucky.type = type
                 req._bucky.readyStateTimes[0] = now()
-                req._bucky.url = url
+                req._bucky.endpoint = url
+                req._bucky.url = document.location.toString()
 
                 if !!req.addEventListener
                   req.addEventListener 'readystatechange', (evt) ->
