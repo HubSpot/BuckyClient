@@ -65,16 +65,17 @@
     };
     tagOptions = {};
     if (!isServer) {
-      $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol]') : void 0;
+      $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol],[data-bucky-query-string]') : void 0;
       if ($tag) {
         tagOptions = {
           host: $tag.getAttribute('data-bucky-host'),
           pagePerformanceKey: $tag.getAttribute('data-bucky-page'),
           requestsKey: $tag.getAttribute('data-bucky-requests'),
           json: $tag.getAttribute('data-bucky-json'),
-          influxLineProtocol: $tag.getAttribute('data-bucky-influx-line-protocol')
+          influxLineProtocol: $tag.getAttribute('data-bucky-influx-line-protocol'),
+          queryString: $tag.getAttribute('data-bucky-query-string')
         };
-        _ref = ['pagePerformanceKey', 'requestsKey'];
+        _ref = ['pagePerformanceKey', 'requestsKey', 'json', 'influxLineProtocol', 'queryString'];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           key = _ref[_i];
           if (((_ref1 = tagOptions[key]) != null ? _ref1.toString().toLowerCase() : void 0) === 'true' || tagOptions[key] === '') {
@@ -398,7 +399,7 @@
           path = requests.urlToKey(document.location.toString()) + ".page";
         }
         if (options.influxLineProtocol === true && !influxLineProtocolSet) {
-          path += ",url=" + (escapeTag(document.location.toString())) + ",key=";
+          path += ",url=" + (escapeTag(document.location.toString())) + ",timing=";
           influxLineProtocolSet = true;
         }
         if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {

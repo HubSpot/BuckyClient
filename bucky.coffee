@@ -99,7 +99,7 @@ exportDef = ->
 
   tagOptions = {}
   if not isServer
-    $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol]')
+    $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol],[data-bucky-query-string]')
     if $tag
       tagOptions = {
         host: $tag.getAttribute('data-bucky-host')
@@ -112,9 +112,10 @@ exportDef = ->
         # These are the change the format of the client output without having to manually call setOptions
         json: $tag.getAttribute('data-bucky-json')
         influxLineProtocol: $tag.getAttribute('data-bucky-influx-line-protocol')
+        queryString: $tag.getAttribute('data-bucky-query-string')
       }
 
-      for key in ['pagePerformanceKey', 'requestsKey']
+      for key in ['pagePerformanceKey', 'requestsKey', 'json', 'influxLineProtocol', 'queryString']
         if tagOptions[key]?.toString().toLowerCase() is 'true' or tagOptions[key] is ''
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
@@ -419,7 +420,7 @@ exportDef = ->
       if not path or path is true
         path = requests.urlToKey(document.location.toString()) + ".page"
       if options.influxLineProtocol is true and not influxLineProtocolSet
-        path += ",url=" + (escapeTag document.location.toString()) + ",key="
+        path += ",url=" + (escapeTag document.location.toString()) + ",timing="
         influxLineProtocolSet = true
 
       if document.readyState in ['uninitialized', 'loading']
