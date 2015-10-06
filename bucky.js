@@ -58,18 +58,24 @@
       decimalPrecision: 3,
       sendLatency: false,
       sample: 1,
-      active: true
+      active: true,
+      json: false,
+      influxLineProtocol: false,
+      queryString: null
     };
     tagOptions = {};
     if (!isServer) {
-      $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests]') : void 0;
+      $tag = typeof document.querySelector === "function" ? document.querySelector('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol],[data-bucky-query-string]') : void 0;
       if ($tag) {
         tagOptions = {
           host: $tag.getAttribute('data-bucky-host'),
           pagePerformanceKey: $tag.getAttribute('data-bucky-page'),
-          requestsKey: $tag.getAttribute('data-bucky-requests')
+          requestsKey: $tag.getAttribute('data-bucky-requests'),
+          json: $tag.getAttribute('data-bucky-json'),
+          influxLineProtocol: $tag.getAttribute('data-bucky-influx-line-protocol'),
+          queryString: $tag.getAttribute('data-bucky-query-string')
         };
-        _ref = ['pagePerformanceKey', 'requestsKey'];
+        _ref = ['pagePerformanceKey', 'requestsKey', 'json', 'influxLineProtocol', 'queryString'];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           key = _ref[_i];
           if (((_ref1 = tagOptions[key]) != null ? _ref1.toString().toLowerCase() : void 0) === 'true' || tagOptions[key] === '') {
@@ -144,7 +150,7 @@
       }
     };
     makeRequest = function(data) {
-      var body, corsSupport, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
+      var body, corsSupport, endpoint, match, name, origin, req, sameOrigin, sendStart, val, _ref3;
       corsSupport = isServer || (window.XMLHttpRequest && (window.XMLHttpRequest.defake || 'withCredentials' in new window.XMLHttpRequest()));
       if (isServer) {
         sameOrigin = true;
@@ -162,24 +168,41 @@
         }
       }
       sendStart = now();
-      body = '';
-      for (name in data) {
-        val = data[name];
-        body += "" + name + ":" + val + "\n";
+      if (options.json === true) {
+        body = JSON.stringify(data);
+      } else {
+        body = '';
+        for (name in data) {
+          val = data[name];
+          body += "" + name + ":" + val + "\n";
+        }
       }
       if (!sameOrigin && !corsSupport && ((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null)) {
         req = new window.XDomainRequest;
       } else {
         req = new ((_ref3 = typeof window !== "undefined" && window !== null ? window.XMLHttpRequest : void 0) != null ? _ref3 : XMLHttpRequest);
       }
-      req.bucky = {
-        track: false
-      };
-      req.open('POST', "" + options.host + "/v1/send", true);
-      req.setRequestHeader('Content-Type', 'text/plain');
-      req.addEventListener('load', function() {
-        return updateLatency(now() - sendStart);
-      }, false);
+      if (req._bucky) {
+        req._bucky.track = false;
+      }
+      endpoint = "" + options.host + "/v1/send";
+      if (options.json === true) {
+        endpoint += "/json";
+      }
+      req.open('POST', endpoint, true);
+      if (req.addEventListener) {
+        req.addEventListener('load', function() {
+          return updateLatency(now() - sendStart);
+        }, false);
+      } else if (req.attachEvent) {
+        req.attachEvent('onload', function() {
+          return updateLatency(now() - sendStart);
+        });
+      } else {
+        req.onload = function() {
+          return updateLatency(now() - sendStart);
+        };
+      }
       req.send(body);
       return req;
     };
@@ -225,7 +248,7 @@
       }
     };
     makeClient = function(prefix) {
-      var buildPath, count, exports, nextMakeClient, requests, send, sendPagePerformance, sentPerformanceData, timer, val;
+      var buildPath, count, escapeTag, exports, nextMakeClient, requests, send, sendPagePerformance, sentPerformanceData, timer, val;
       if (prefix == null) {
         prefix = '';
       }
@@ -252,8 +275,7 @@
           return send(path, duration, 'timer');
         },
         time: function() {
-          var action, args, ctx, done, path,
-            _this = this;
+          var action, args, ctx, done, path;
           path = arguments[0], action = arguments[1], ctx = arguments[2], args = 4 <= arguments.length ? __slice.call(arguments, 3) : [];
           timer.start(path);
           done = function() {
@@ -365,7 +387,7 @@
       };
       sentPerformanceData = false;
       sendPagePerformance = function(path) {
-        var start, time, _ref3, _ref4, _ref5,
+        var influxLineProtocolSet, start, time, _ref3, _ref4, _ref5,
           _this = this;
         if ((typeof window !== "undefined" && window !== null ? (_ref3 = window.performance) != null ? _ref3.timing : void 0 : void 0) == null) {
           return false;
@@ -374,15 +396,31 @@
           return false;
         }
         if (!path || path === true) {
-          path = requests.urlToKey(document.location.toString()) + '.page';
+          path = requests.urlToKey(document.location.toString()) + ".page";
+        }
+        if (options.influxLineProtocol === true && !influxLineProtocolSet) {
+          path += ",url=" + (escapeTag(document.location.toString())) + ",timing=";
+          influxLineProtocolSet = true;
         }
         if ((_ref4 = document.readyState) === 'uninitialized' || _ref4 === 'loading') {
-          if (typeof window.addEventListener === "function") {
+          if (window.addEventListener) {
             window.addEventListener('load', function() {
               return setTimeout(function() {
                 return sendPagePerformance.call(_this, path);
               }, 500);
             }, false);
+          } else if (window.attachEvent) {
+            window.attachEvent('onload', function() {
+              return setTimeout(function() {
+                return sendPagePerformance.call(_this, path);
+              }, 500);
+            });
+          } else {
+            window.onload = function() {
+              return setTimeout(function() {
+                return sendPagePerformance.call(_this, path);
+              }, 500);
+            };
           }
           return false;
         }
@@ -392,7 +430,11 @@
         for (key in _ref5) {
           time = _ref5[key];
           if (typeof time === 'number') {
-            timer.send("" + path + "." + key, time - start);
+            if (options.influxLineProtocol === true) {
+              timer.send(path + key, time - start);
+            } else {
+              timer.send("" + path + "." + key, time - start);
+            }
           }
         }
         return true;
@@ -452,7 +494,11 @@
           _results = [];
           for (status in diffs) {
             val = diffs[status];
-            _results.push(timer.send("" + path + "." + status, val));
+            if (options.influxLineProtocol === true) {
+              _results.push(timer.send("" + path + ",status=" + (escapeTag(status)), val));
+            } else {
+              _results.push(timer.send("" + path + "." + status, val));
+            }
           }
           return _results;
         },
@@ -507,59 +553,98 @@
           }
         },
         monitor: function(root) {
-          var done, self, _XMLHttpRequest;
+          var done, self, xhr, _XMLHttpRequest;
           if (!root || root === true) {
             root = requests.urlToKey(document.location.toString()) + '.requests';
           }
           self = this;
-          done = function(_arg) {
-            var dur, event, readyStateTimes, request, startTime, stat, type, url;
-            type = _arg.type, url = _arg.url, event = _arg.event, request = _arg.request, readyStateTimes = _arg.readyStateTimes, startTime = _arg.startTime;
-            if (startTime != null) {
-              dur = now() - startTime;
+          done = function(req, evt) {
+            var dur, stat;
+            if (req._bucky.startTime != null) {
+              dur = now() - req._bucky.startTime;
             } else {
               return;
             }
-            url = self.getFullUrl(url);
-            stat = self.urlToKey(url, type, root);
+            if (options.influxLineProtocol === true) {
+              stat = "" + root + ",url=" + (escapeTag(req._bucky.url)) + ",endpoint=" + (escapeTag(req._bucky.endpoint)) + ",method=" + (escapeTag(req._bucky.type));
+            } else {
+              req._bucky.url = self.getFullUrl(req._bucky.url);
+              stat = self.urlToKey(req._bucky.url, req._bucky.type, root);
+            }
             send(stat, dur, 'timer');
-            self.sendReadyStateTimes(stat, readyStateTimes);
-            if ((request != null ? request.status : void 0) != null) {
-              if (request.status > 12000) {
-                count("" + stat + ".0");
-              } else if (request.status !== 0) {
-                count("" + stat + "." + (request.status.toString().charAt(0)) + "xx");
+            self.sendReadyStateTimes(stat, req._bucky.readyStateTimes);
+            if ((req != null ? req.status : void 0) != null) {
+              if (req.status > 12000) {
+                if (options.influxLineProtocol === true) {
+                  count("" + stat + ",status=0");
+                } else {
+                  count("" + stat + ".0");
+                }
+              } else if (req.status !== 0) {
+                if (options.influxLineProtocol === true) {
+                  count("" + stat + ",status=" + (req.status.toString().charAt(0)) + "xx");
+                } else {
+                  count("" + stat + "." + (req.status.toString().charAt(0)) + "xx");
+                }
               }
-              return count("" + stat + "." + request.status);
+              if (options.influxLineProtocol === true) {
+                return count("" + stat + ",status=" + req.status);
+              } else {
+                return count("" + stat + "." + req.status);
+              }
             }
           };
-          _XMLHttpRequest = window.XMLHttpRequest;
-          return window.XMLHttpRequest = function() {
-            var e, readyStateTimes, req, startTime, _open, _send;
+          xhr = function() {
+            var e, req, _open, _send;
             req = new _XMLHttpRequest;
             try {
-              startTime = null;
-              readyStateTimes = {};
+              req._bucky = {};
+              req._bucky.startTime = null;
+              req._bucky.readyStateTimes = {};
+              req._bucky.isDone = false;
+              req._bucky.track = true;
               _open = req.open;
               req.open = function(type, url, async) {
                 var e;
                 try {
-                  readyStateTimes[0] = now();
-                  req.addEventListener('readystatechange', function() {
-                    return readyStateTimes[req.readyState] = now();
-                  }, false);
-                  req.addEventListener('loadend', function(event) {
-                    if ((req.bucky == null) || req.bucky.track !== false) {
-                      return done({
-                        type: type,
-                        url: url,
-                        event: event,
-                        startTime: startTime,
-                        readyStateTimes: readyStateTimes,
-                        request: req
-                      });
-                    }
-                  }, false);
+                  req._bucky.type = type;
+                  req._bucky.readyStateTimes[0] = now();
+                  req._bucky.endpoint = url;
+                  req._bucky.url = document.location.toString();
+                  if (!!req.addEventListener) {
+                    req.addEventListener('readystatechange', function(evt) {
+                      if (req._bucky.track === !true) {
+                        return;
+                      }
+                      req._bucky.readyStateTimes[req.readyState] = now();
+                      if (req.readyState === 4 && req._bucky.isDone !== true) {
+                        req._bucky.isDone = true;
+                        return done(req, evt);
+                      }
+                    }, false);
+                  } else if (!!req.attachEvent) {
+                    req.attachEvent('onreadystatechange', function(evt) {
+                      if (req._bucky.track === !true) {
+                        return;
+                      }
+                      req._bucky.readyStateTimes[req.readyState] = now();
+                      if (req.readyState === 4 && req._bucky.isDone !== true) {
+                        req._bucky.isDone = true;
+                        return done(req, evt);
+                      }
+                    });
+                  } else {
+                    req.onreadystatechange = function(evt) {
+                      if (req._bucky.track === !true) {
+                        return;
+                      }
+                      req._bucky.readyStateTimes[req.readyState] = now();
+                      if (req.readyState === 4 && req._bucky.isDone !== true) {
+                        req._bucky.isDone = true;
+                        return done(req, evt);
+                      }
+                    };
+                  }
                 } catch (_error) {
                   e = _error;
                   log.error("Bucky error monitoring XHR open call", e);
@@ -568,7 +653,7 @@
               };
               _send = req.send;
               req.send = function() {
-                startTime = now();
+                req._bucky.startTime = now();
                 return _send.apply(req, arguments);
               };
             } catch (_error) {
@@ -577,7 +662,19 @@
             }
             return req;
           };
+          _XMLHttpRequest = window.XMLHttpRequest;
+          return window.XMLHttpRequest = xhr;
         }
+      };
+      escapeTag = function(tag) {
+        tag = tag.replace(/\\?( |,)/g, "\\$1");
+        if (options.queryString === 'replace') {
+          tag = tag.replace(/(\?|&)/g, ",");
+        }
+        if (options.queryString === 'escape') {
+          tag = tag.replace(/\\=/g, "\\=");
+        }
+        return tag;
       };
       nextMakeClient = function(nextPrefix) {
         var path;

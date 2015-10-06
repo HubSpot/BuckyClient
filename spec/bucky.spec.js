@@ -105,7 +105,10 @@
     server = null;
     beforeEach(function() {
       server = sinon.fakeServer.create();
-      return server.autoRespond = true;
+      server.autoRespond = true;
+      return Bucky.setOptions({
+        json: false
+      });
     });
     afterEach(function() {
       return server.restore();
@@ -116,12 +119,31 @@
       expect(server.requests.length).toBe(1);
       return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
     });
-    return it('should send timers', function() {
+    it('should send timers', function() {
       Bucky.send('data.1', 5, 'timer');
       Bucky.send('data.2', 3, 'timer');
       Bucky.flush();
       expect(server.requests.length).toBe(1);
       return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
+    });
+    it('should send a datapoint as JSON', function() {
+      Bucky.setOptions({
+        json: true
+      });
+      Bucky.send('data.point', 4);
+      Bucky.flush();
+      expect(server.requests.length).toBe(1);
+      return expect(server.requests[0].requestBody).toBe('{"data.point":"4|g"}');
+    });
+    return it('should send timers as JSON', function() {
+      Bucky.setOptions({
+        json: true
+      });
+      Bucky.send('data.1', 5, 'timer');
+      Bucky.send('data.2', 3, 'timer');
+      Bucky.flush();
+      expect(server.requests.length).toBe(1);
+      return expect(server.requests[0].requestBody).toBe('{"data.1":"5|ms","data.2":"3|ms"}');
     });
   });
 

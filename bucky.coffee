@@ -64,9 +64,42 @@ exportDef = ->
     # Set to false to disable sends (in dev mode for example)
     active: true
 
+    # Setting json to true will set the script's output to JSON format instead of statsd line protocol
+    # This will allow for metrics that contain a colin to be contained in the key
+    json: false
+
+    # Setting influxLineProtocol to true will format the metrics keys to influxdb line protocol
+    # Note: The json option must be set to true for influxLineProtocol
+    # The measurement and the tags will be treated as the key
+    # The outbound key be formatted as: measurement,tag1=value,tag2=value
+    # Additional tags and values that you want tracked can be added and passed in with the measurement
+    # Ex: If you're tracking a specific action and you want to be able to distinguish the action based
+    #     on user role you can add a role tag to the bucky function call
+    #   Bucky.count("actionName,role=" + user.role);
+    # The output will be:
+    #   {"actionName,role=admin":"1|c",
+    #    "actionName,role=user": "5|c",
+    #    "actionName,role=undefined": "50|c"}
+    #
+    # When using requests.monitor or sendPagePerformance the url will be added as a tag
+    # Example use case:
+    #   Bucky.sendPagePerformance("page");
+    #   Bucky.requests.monitor("ajax");
+    # Example output:
+    #   {"page,url=http://localhost:3000/example,data=requestStart": "397|ms",
+    #    "ajax,url=http://localhost:3000/example,method=get,status=200": "54|c"}
+    # Note: commas and spaces in tags will be escaped to conform with influxdb line protocol
+    # Ex:
+    #   {"page,url=http://localhost:3000/example/#/hash\ with\ spaces\,\ and\ commas,data=requestStart": "223|ms"}
+    # See more about influxdb line format here: https://influxdb.com/docs/v0.9/write_protocols/write_syntax.html
+    influxLineProtocol: false
+
+    # When using influxLineProtocol, determines how query strings are handled, because keys cannot contain an equals
+    queryString: null
+
   tagOptions = {}
   if not isServer
-    $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests]')
+    $tag = document.querySelector?('[data-bucky-host],[data-bucky-page],[data-bucky-requests],[data-bucky-json],[data-bucky-influx-line-protocol],[data-bucky-query-string]')
     if $tag
       tagOptions = {
         host: $tag.getAttribute('data-bucky-host')
@@ -75,16 +108,21 @@ exportDef = ->
         # the methods.
         pagePerformanceKey: $tag.getAttribute('data-bucky-page')
         requestsKey: $tag.getAttribute('data-bucky-requests')
+
+        # These are the change the format of the client output without having to manually call setOptions
+        json: $tag.getAttribute('data-bucky-json')
+        influxLineProtocol: $tag.getAttribute('data-bucky-influx-line-protocol')
+        queryString: $tag.getAttribute('data-bucky-query-string')
       }
 
-      for key in ['pagePerformanceKey', 'requestsKey']
+      for key in ['pagePerformanceKey', 'requestsKey', 'json', 'influxLineProtocol', 'queryString']
         if tagOptions[key]?.toString().toLowerCase() is 'true' or tagOptions[key] is ''
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
-   
+
   options = extend {}, defaults, tagOptions
-    
+
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -171,33 +209,44 @@ exportDef = ->
           sameOrigin = false
       else
         # Relative URL
-        
+
         sameOrigin = true
 
     sendStart = now()
-  
-    body = ''
-    for name, val of data
-      body += "#{ name }:#{ val }\n"
+
+    if options.json is true
+      body = JSON.stringify data
+    else
+      body = ''
+      for name, val of data
+        body += "#{ name }:#{ val }\n"
 
     if not sameOrigin and not corsSupport and window?.XDomainRequest?
-      # CORS support for IE9
+      # CORS support for IE8/9
       req = new window.XDomainRequest
     else
       req = new (window?.XMLHttpRequest ? XMLHttpRequest)
 
-    # Don't track this request with Bucky, as we'd be tracking our own
-    # sends forever.  The latency of this request is independently tracked
-    # by updateLatency.
-    req.bucky = {track: false}
+    # Set flag to not track this request if requests monitoring is turned on,
+    # otherwise the monitoring will enter an infinite loop.
+    # The latency of this request is independently tracked by updateLatency.
+    req._bucky.track = false if req._bucky
 
-    req.open 'POST', "#{ options.host }/v1/send", true
+    endpoint = "#{ options.host }/v1/send"
+    endpoint += "/json" if options.json is true
 
-    req.setRequestHeader 'Content-Type', 'text/plain'
+    req.open 'POST', endpoint, true
 
-    req.addEventListener 'load', ->
-      updateLatency(now() - sendStart)
-    , false
+    if req.addEventListener
+      req.addEventListener 'load', ->
+        updateLatency(now() - sendStart)
+      , false
+    else if req.attachEvent
+      req.attachEvent 'onload', ->
+        updateLatency(now() - sendStart)
+    else
+      req.onload = ->
+        updateLatency(now() - sendStart)
 
     req.send body
 
@@ -269,7 +318,7 @@ exportDef = ->
       time: (path, action, ctx, args...) ->
         timer.start path
 
-        done = =>
+        done = ->
           timer.stop path
 
         args.splice(0, 0, done)
@@ -369,15 +418,29 @@ exportDef = ->
       return false if sentPerformanceData
 
       if not path or path is true
-        path = requests.urlToKey(document.location.toString()) + '.page'
+        path = requests.urlToKey(document.location.toString()) + ".page"
+      if options.influxLineProtocol is true and not influxLineProtocolSet
+        path += ",url=" + (escapeTag document.location.toString()) + ",timing="
+        influxLineProtocolSet = true
 
       if document.readyState in ['uninitialized', 'loading']
         # The data isn't fully ready until document load
-        window.addEventListener? 'load', =>
-          setTimeout =>
-            sendPagePerformance.call(@, path)
-          , 500
-        , false
+        if window.addEventListener
+          window.addEventListener 'load', =>
+            setTimeout =>
+              sendPagePerformance.call(@, path)
+            , 500
+          , false
+        else if window.attachEvent
+          window.attachEvent 'onload', =>
+            setTimeout =>
+              sendPagePerformance.call(@, path)
+            , 500
+        else
+          window.onload =  =>
+            setTimeout =>
+              sendPagePerformance.call(@, path)
+            , 500
 
         return false
 
@@ -385,7 +448,10 @@ exportDef = ->
 
       start = window.performance.timing.navigationStart
       for key, time of window.performance.timing when typeof time is 'number'
-        timer.send "#{ path }.#{ key }", (time - start)
+        if options.influxLineProtocol is true
+          timer.send (path + key), (time - start)
+        else
+          timer.send "#{ path }.#{ key }", (time - start)
 
       return true
 
@@ -431,7 +497,10 @@ exportDef = ->
           last = time
 
         for status, val of diffs
-          timer.send "#{ path }.#{ status }", val
+          if options.influxLineProtocol is true
+            timer.send "#{ path },status=#{ escapeTag status }", val
+          else
+            timer.send "#{ path }.#{ status }", val
 
       urlToKey: (url, type, root) ->
         url = url.replace /https?:\/\//i, ''
@@ -489,53 +558,87 @@ exportDef = ->
           root = requests.urlToKey(document.location.toString()) + '.requests'
 
         self = this
-        done = ({type, url, event, request, readyStateTimes, startTime}) ->
-          if startTime?
-            dur = now() - startTime
+        done = (req, evt) ->
+          if req._bucky.startTime?
+            dur = now() - req._bucky.startTime
           else
             return
 
-          url = self.getFullUrl url
-          stat = self.urlToKey url, type, root
+          if options.influxLineProtocol is true
+            stat = "#{ root },url=#{ (escapeTag req._bucky.url) },endpoint=#{ (escapeTag req._bucky.endpoint) },method=#{ (escapeTag req._bucky.type) }"
+          else
+            req._bucky.url = self.getFullUrl req._bucky.url
+            stat = self.urlToKey req._bucky.url, req._bucky.type, root
 
           send(stat, dur, 'timer')
 
-          self.sendReadyStateTimes stat, readyStateTimes
+          self.sendReadyStateTimes stat, req._bucky.readyStateTimes
 
-          if request?.status?
-            if request.status > 12000
+          if req?.status?
+            if req.status > 12000
               # Most browsers return status code 0 for aborted/failed requests.  IE returns
               # special status codes over 12000: http://msdn.microsoft.com/en-us/library/aa383770%28VS.85%29.aspx
               #
               # We'll track the 12xxx code, but also store it as a 0
-              count("#{ stat }.0")
+              if options.influxLineProtocol is true
+                count("#{ stat },status=0")
+              else
+                count("#{ stat }.0")
 
-            else if request.status isnt 0
-              count("#{ stat }.#{ request.status.toString().charAt(0) }xx")
+            else if req.status isnt 0
+              if options.influxLineProtocol is true
+                count("#{ stat },status=#{ req.status.toString().charAt(0) }xx")
+              else
+                count("#{ stat }.#{ req.status.toString().charAt(0) }xx")
 
-            count("#{ stat }.#{ request.status }")
+            if options.influxLineProtocol is true
+              count("#{ stat },status=#{ req.status }")
+            else
+              count("#{ stat }.#{ req.status }")
 
-        _XMLHttpRequest = window.XMLHttpRequest
-        window.XMLHttpRequest = ->
+        xhr = ->
           req = new _XMLHttpRequest
 
           try
-            startTime = null
-            readyStateTimes = {}
+            req._bucky = {}
+            req._bucky.startTime = null
+            req._bucky.readyStateTimes = {}
+            req._bucky.isDone = false
+            req._bucky.track = true
 
             _open = req.open
             req.open = (type, url, async) ->
               try
-                readyStateTimes[0] = now()
+                req._bucky.type = type
+                req._bucky.readyStateTimes[0] = now()
+                req._bucky.endpoint = url
+                req._bucky.url = document.location.toString()
 
-                req.addEventListener 'readystatechange', ->
-                  readyStateTimes[req.readyState] = now()
-                , false
-
-                req.addEventListener 'loadend', (event) ->
-                  if not req.bucky? or req.bucky.track isnt false
-                    done {type, url, event, startTime, readyStateTimes, request: req}
-                , false
+                if !!req.addEventListener
+                  req.addEventListener 'readystatechange', (evt) ->
+                    if req._bucky.track is not true
+                      return
+                    req._bucky.readyStateTimes[req.readyState] = now()
+                    if req.readyState == 4 and req._bucky.isDone isnt true
+                      req._bucky.isDone = true
+                      done req, evt
+                  , false
+                else if !!req.attachEvent
+                  req.attachEvent 'onreadystatechange', (evt) ->
+                    if req._bucky.track is not true
+                      return
+                    req._bucky.readyStateTimes[req.readyState] = now()
+                    if req.readyState == 4 and req._bucky.isDone isnt true
+                      req._bucky.isDone = true
+                      done req, evt
+                else
+                  req.onreadystatechange = (evt) ->
+                    if req._bucky.track is not true
+                      return
+                    req._bucky.readyStateTimes[req.readyState] = now()
+                    if req.readyState == 4 and req._bucky.isDone isnt true
+                      req._bucky.isDone = true
+                      done req, evt
               catch e
                 log.error "Bucky error monitoring XHR open call", e
 
@@ -543,14 +646,25 @@ exportDef = ->
 
             _send = req.send
             req.send = ->
-              startTime = now()
+              req._bucky.startTime = now()
 
               _send.apply req, arguments
           catch e
             log.error "Bucky error monitoring XHR", e
 
           req
+
+        _XMLHttpRequest = window.XMLHttpRequest
+        window.XMLHttpRequest = xhr
     }
+
+    escapeTag = (tag) ->
+      tag = tag.replace /\\?( |,)/g, "\\$1"
+      if options.queryString == 'replace'
+        tag = tag.replace /(\?|&)/g, ","
+      if options.queryString == 'escape'
+        tag = tag.replace /\\=/g, "\\="
+      tag
 
     nextMakeClient = (nextPrefix='') ->
       path = prefix ? ''
