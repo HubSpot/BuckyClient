@@ -1,4 +1,4 @@
-isServer = module? and not window?.module
+isServer = module? and not window?
 
 if isServer
   {XMLHttpRequest} = require('xmlhttprequest')
@@ -82,9 +82,9 @@ exportDef = ->
           tagOptions[key] = true
         else if tagOptions[key]?.toString().toLowerCase is 'false'
           tagOptions[key] = null
-   
+
   options = extend {}, defaults, tagOptions
-    
+
   TYPE_MAP =
     'timer': 'ms'
     'gauge': 'g'
@@ -171,11 +171,11 @@ exportDef = ->
           sameOrigin = false
       else
         # Relative URL
-        
+
         sameOrigin = true
 
     sendStart = now()
-  
+
     body = ''
     for name, val of data
       body += "#{ name }:#{ val }\n"
