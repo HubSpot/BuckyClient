@@ -80,7 +80,7 @@ exportDef = ->
       for key in ['pagePerformanceKey', 'requestsKey']
         if tagOptions[key]?.toString().toLowerCase() is 'true' or tagOptions[key] is ''
           tagOptions[key] = true
-        else if tagOptions[key]?.toString().toLowerCase is 'false'
+        else if tagOptions[key]?.toString().toLowerCase() is 'false'
           tagOptions[key] = null
    
   options = extend {}, defaults, tagOptions
