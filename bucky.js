@@ -80,7 +80,7 @@
         }
       }
     }
-    options = extend({}, defaults, tagOptions);
+    options = extend({}, tagOptions, defaults);
     TYPE_MAP = {
       'timer': 'ms',
       'gauge': 'g',
