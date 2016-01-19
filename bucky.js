@@ -74,7 +74,7 @@
           key = _ref[_i];
           if (((_ref1 = tagOptions[key]) != null ? _ref1.toString().toLowerCase() : void 0) === 'true' || tagOptions[key] === '') {
             tagOptions[key] = true;
-          } else if (((_ref2 = tagOptions[key]) != null ? _ref2.toString().toLowerCase : void 0) === 'false') {
+          } else if (((_ref2 = tagOptions[key]) != null ? _ref2.toString().toLowerCase() : void 0) === 'false') {
             tagOptions[key] = null;
           }
         }
