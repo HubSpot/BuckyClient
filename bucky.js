@@ -2,7 +2,7 @@
   var XMLHttpRequest, exportDef, extend, initTime, isServer, log, now,
     __slice = [].slice;
 
-  isServer = (typeof module !== "undefined" && module !== null) && !(typeof window !== "undefined" && window !== null ? window.module : void 0);
+  isServer = (typeof module !== "undefined" && module !== null) && (typeof window === "undefined" || window === null);
 
   if (isServer) {
     XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
