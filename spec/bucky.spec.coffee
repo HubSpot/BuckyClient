@@ -112,3 +112,12 @@ describe 'send', ->
     expect(server.requests.length).toBe(1)
 
     expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+
+  it 'should aggregate timers', ->
+    Bucky.send 'data.1', 5, 'timer'
+    Bucky.send 'data.1', 10, 'timer'
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+
+    expect(server.requests[0].requestBody).toBe("data.1:7.5|ms|@0.5\n")
