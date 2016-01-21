@@ -227,7 +227,7 @@ exportDef = ->
       out[key] = "#{ value }|#{ TYPE_MAP[point.type] }"
 
       if point.count isnt 1
-        out[key] += "@#{ round(1 / point.count, 5) }"
+        out[key] += "|@#{ round(1 / point.count, 5) }"
 
     makeRequest out
 

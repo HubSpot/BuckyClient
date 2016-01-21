@@ -116,12 +116,19 @@
       expect(server.requests.length).toBe(1);
       return expect(server.requests[0].requestBody).toBe("data.point:4|g\n");
     });
-    return it('should send timers', function() {
+    it('should send timers', function() {
       Bucky.send('data.1', 5, 'timer');
       Bucky.send('data.2', 3, 'timer');
       Bucky.flush();
       expect(server.requests.length).toBe(1);
       return expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n");
+    });
+    return it('should aggregate timers', function() {
+      Bucky.send('data.1', 5, 'timer');
+      Bucky.send('data.1', 10, 'timer');
+      Bucky.flush();
+      expect(server.requests.length).toBe(1);
+      return expect(server.requests[0].requestBody).toBe("data.1:7.5|ms|@0.5\n");
     });
   });
 
