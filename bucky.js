@@ -105,25 +105,37 @@
       return Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision);
     };
     queue = {};
-    enqueue = function(path, value, type) {
-      var count, _ref3;
+    enqueue = function(path, value, type, tags) {
+      var count, tagStr, _ref3;
+      if (tags == null) {
+        tags = [];
+      }
       if (!ACTIVE) {
         return;
       }
       count = 1;
-      if (path in queue) {
+      key = '';
+      if (tags && tags instanceof Array && tags.length) {
+        tagStr = tags.join(',');
+        key = "" + path + "+" + type + "+" + tagStr;
+      } else {
+        key = "" + path + "+" + type;
+      }
+      if (key in queue) {
         if (type === 'counter') {
-          value += queue[path].value;
+          value += queue[key].value;
         } else {
-          count = (_ref3 = queue[path].count) != null ? _ref3 : count;
+          count = (_ref3 = queue[key].count) != null ? _ref3 : count;
           count++;
-          value = queue[path].value + (value - queue[path].value) / count;
+          value = queue[key].value + (value - queue[key].value) / count;
         }
       }
-      queue[path] = {
+      queue[key] = {
+        path: path,
         value: value,
         type: type,
-        count: count
+        count: count,
+        tags: tags
       };
       return considerSending();
     };
@@ -165,7 +177,7 @@
       body = '';
       for (name in data) {
         val = data[name];
-        body += "" + name + ":" + val + "\n";
+        body += "" + val.path + ":" + val.value + "\n";
       }
       if (!sameOrigin && !corsSupport && ((typeof window !== "undefined" && window !== null ? window.XDomainRequest : void 0) != null)) {
         req = new window.XDomainRequest;
@@ -184,7 +196,7 @@
       return req;
     };
     sendQueue = function() {
-      var out, point, value, _ref3;
+      var out, point, tagStr, value, _ref3;
       if (!ACTIVE) {
         log("Would send bucky queue");
         return;
@@ -193,10 +205,11 @@
       for (key in queue) {
         point = queue[key];
         HISTORY.push({
-          path: key,
+          path: point.path,
           count: point.count,
           type: point.type,
-          value: point.value
+          value: point.value,
+          tags: point.tags
         });
         if (TYPE_MAP[point.type] == null) {
           log.error("Type " + point.type + " not understood by Bucky");
@@ -206,9 +219,16 @@
         if ((_ref3 = point.type) === 'gauge' || _ref3 === 'timer') {
           value = round(value);
         }
-        out[key] = "" + value + "|" + TYPE_MAP[point.type];
+        out[key] = {
+          path: point.path,
+          value: "" + value + "|" + TYPE_MAP[point.type]
+        };
         if (point.count !== 1) {
-          out[key] += "|@" + (round(1 / point.count, 5));
+          out[key].value += "|@" + (round(1 / point.count, 5));
+        }
+        if (point.tags && point.tags instanceof Array && point.tags.length) {
+          tagStr = point.tags.join(',');
+          out[key].value += "|#" + tagStr;
         }
       }
       makeRequest(out);
@@ -236,53 +256,68 @@
           return path;
         }
       };
-      send = function(path, value, type) {
+      send = function(path, value, type, tags) {
         if (type == null) {
           type = 'gauge';
+        }
+        if (tags == null) {
+          tags = [];
         }
         if ((value == null) || (path == null)) {
           log.error("Can't log " + path + ":" + value);
           return;
         }
-        return enqueue(buildPath(path), value, type);
+        return enqueue(buildPath(path), value, type, tags);
       };
       timer = {
         TIMES: {},
-        send: function(path, duration) {
-          return send(path, duration, 'timer');
+        send: function(path, duration, tags) {
+          if (tags == null) {
+            tags = [];
+          }
+          return send(path, duration, 'timer', tags);
         },
         time: function() {
-          var action, args, ctx, done, path,
+          var action, args, ctx, done, path, tags,
             _this = this;
-          path = arguments[0], action = arguments[1], ctx = arguments[2], args = 4 <= arguments.length ? __slice.call(arguments, 3) : [];
+          path = arguments[0], tags = arguments[1], action = arguments[2], ctx = arguments[3], args = 5 <= arguments.length ? __slice.call(arguments, 4) : [];
+          if (tags == null) {
+            tags = [];
+          }
           timer.start(path);
           done = function() {
-            return timer.stop(path);
+            return timer.stop(path, tags);
           };
           args.splice(0, 0, done);
           return action.apply(ctx, args);
         },
         timeSync: function() {
-          var action, args, ctx, path, ret;
-          path = arguments[0], action = arguments[1], ctx = arguments[2], args = 4 <= arguments.length ? __slice.call(arguments, 3) : [];
+          var action, args, ctx, path, ret, tags;
+          path = arguments[0], tags = arguments[1], action = arguments[2], ctx = arguments[3], args = 5 <= arguments.length ? __slice.call(arguments, 4) : [];
+          if (tags == null) {
+            tags = [];
+          }
           timer.start(path);
           ret = action.apply(ctx, args);
-          timer.stop(path);
+          timer.stop(path, tags);
           return ret;
         },
-        wrap: function(path, action) {
+        wrap: function(path, tags, action) {
+          if (tags == null) {
+            tags = [];
+          }
           if (action != null) {
             return function() {
               var args;
               args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-              return timer.timeSync.apply(timer, [path, action, this].concat(__slice.call(args)));
+              return timer.timeSync.apply(timer, [path, tags, action, this].concat(__slice.call(args)));
             };
           } else {
             return function(action) {
               return function() {
                 var args;
                 args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
-                return timer.timeSync.apply(timer, [path, action, this].concat(__slice.call(args)));
+                return timer.timeSync.apply(timer, [path, tags, action, this].concat(__slice.call(args)));
               };
             };
           }
@@ -290,7 +325,7 @@
         start: function(path) {
           return timer.TIMES[path] = now();
         },
-        stop: function(path) {
+        stop: function(path, tags) {
           var duration;
           if (timer.TIMES[path] == null) {
             log.error("Timer " + path + " ended without having been started");
@@ -298,10 +333,13 @@
           }
           duration = now() - timer.TIMES[path];
           timer.TIMES[path] = void 0;
-          return timer.send(path, duration);
+          return timer.send(path, duration, tags);
         },
-        stopwatch: function(prefix, start) {
+        stopwatch: function(prefix, start, tags) {
           var last, _now;
+          if (tags == null) {
+            tags = [];
+          }
           if (start != null) {
             _now = function() {
               return +(new Date);
@@ -312,7 +350,7 @@
           }
           last = start;
           return {
-            mark: function(path, offset) {
+            mark: function(path, offset, tags) {
               var end;
               if (offset == null) {
                 offset = 0;
@@ -321,7 +359,7 @@
               if (prefix) {
                 path = prefix + '.' + path;
               }
-              return timer.send(path, end - start + offset);
+              return timer.send(path, end - start + offset, tags);
             },
             split: function(path, offset) {
               var end;
@@ -332,18 +370,21 @@
               if (prefix) {
                 path = prefix + '.' + path;
               }
-              timer.send(path, end - last + offset);
+              timer.send(path, end - last + offset, tags);
               return last = end;
             }
           };
         },
-        mark: function(path, time) {
+        mark: function(path, time, tags) {
           var start;
+          if (tags == null) {
+            tags = [];
+          }
           if (time == null) {
             time = +(new Date);
           }
           start = timer.navigationStart();
-          return timer.send(path, time - start);
+          return timer.send(path, time - start, tags);
         },
         navigationStart: function() {
           var _ref3, _ref4, _ref5;
@@ -357,16 +398,22 @@
           return now();
         }
       };
-      count = function(path, count) {
+      count = function(path, tags, count) {
+        if (tags == null) {
+          tags = [];
+        }
         if (count == null) {
           count = 1;
         }
-        return send(path, count, 'counter');
+        return send(path, count, 'counter', tags);
       };
       sentPerformanceData = false;
-      sendPagePerformance = function(path) {
-        var start, time, _ref3, _ref4, _ref5,
+      sendPagePerformance = function(path, tags) {
+        var start, tagWithPerfProps, time, _ref3, _ref4, _ref5,
           _this = this;
+        if (tags == null) {
+          tags = [];
+        }
         if ((typeof window !== "undefined" && window !== null ? (_ref3 = window.performance) != null ? _ref3.timing : void 0 : void 0) == null) {
           return false;
         }
@@ -380,7 +427,7 @@
           if (typeof window.addEventListener === "function") {
             window.addEventListener('load', function() {
               return setTimeout(function() {
-                return sendPagePerformance.call(_this, path);
+                return sendPagePerformance.call(_this, path, tags);
               }, 500);
             }, false);
           }
@@ -391,9 +438,13 @@
         _ref5 = window.performance.timing;
         for (key in _ref5) {
           time = _ref5[key];
-          if (typeof time === 'number') {
-            timer.send("" + path + "." + key, time - start);
+          if (!(typeof time === 'number')) {
+            continue;
           }
+          tagWithPerfProps = tags.slice(0);
+          tagWithPerfProps.push("perf-prop:" + key);
+          timer.send(path, time - start, tagWithPerfProps);
+          tagWithPerfProps = [];
         }
         return true;
       };
@@ -429,8 +480,11 @@
             }
           }
         },
-        sendReadyStateTimes: function(path, times) {
+        sendReadyStateTimes: function(path, times, tags) {
           var code, codeMapping, diffs, last, status, time, val, _results;
+          if (tags == null) {
+            tags = [];
+          }
           if (times == null) {
             return;
           }
@@ -452,7 +506,7 @@
           _results = [];
           for (status in diffs) {
             val = diffs[status];
-            _results.push(timer.send("" + path + "." + status, val));
+            _results.push(timer.send("" + path + "." + status, val, tags));
           }
           return _results;
         },
@@ -506,8 +560,11 @@
             return url;
           }
         },
-        monitor: function(root) {
+        monitor: function(root, tags) {
           var done, self, _XMLHttpRequest;
+          if (tags == null) {
+            tags = [];
+          }
           if (!root || root === true) {
             root = requests.urlToKey(document.location.toString()) + '.requests';
           }
@@ -522,8 +579,8 @@
             }
             url = self.getFullUrl(url);
             stat = self.urlToKey(url, type, root);
-            send(stat, dur, 'timer');
-            self.sendReadyStateTimes(stat, readyStateTimes);
+            send(stat, dur, 'timer', tags);
+            self.sendReadyStateTimes(stat, readyStateTimes, tags);
             if ((request != null ? request.status : void 0) != null) {
               if (request.status > 12000) {
                 count("" + stat + ".0");
