@@ -108,24 +108,31 @@ exportDef = ->
     Math.round(num * Math.pow(10, precision)) / Math.pow(10, precision)
 
   queue = {}
-  enqueue = (path, value, type) ->
+  enqueue = (path, value, type, tags=[]) ->
     return unless ACTIVE
 
     count = 1
+    key = ''
 
-    if path of queue
+    if tags and tags instanceof Array and tags.length
+      tagStr = tags.join(',')
+      key = "#{ path }+#{ type }+#{ tagStr }"
+    else
+      key = "#{ path }+#{ type }"
+
+    if key of queue
       # We have multiple of the same datapoint in this queue
       if type is 'counter'
         # Sum the queue
-        value += queue[path].value
+        value += queue[key].value
       else
         # If it's a timer or a gauge, calculate a running average
-        count = queue[path].count ? count
+        count = queue[key].count ? count
         count++
 
-        value = queue[path].value + (value - queue[path].value) / count
+        value = queue[key].value + (value - queue[key].value) / count
 
-    queue[path] = {value, type, count}
+    queue[key] = {path, value, type, count, tags}
 
     do considerSending
 
@@ -178,7 +185,7 @@ exportDef = ->
 
     body = ''
     for name, val of data
-      body += "#{ name }:#{ val }\n"
+      body += "#{ val.path }:#{ val.value }\n"
 
     if not sameOrigin and not corsSupport and window?.XDomainRequest?
       # CORS support for IE9
@@ -211,10 +218,11 @@ exportDef = ->
     out = {}
     for key, point of queue
       HISTORY.push
-        path: key
+        path: point.path
         count: point.count
         type: point.type
         value: point.value
+        tags: point.tags
 
       unless TYPE_MAP[point.type]?
         log.error "Type #{ point.type } not understood by Bucky"
@@ -224,10 +232,14 @@ exportDef = ->
       if point.type in ['gauge', 'timer']
         value = round(value)
 
-      out[key] = "#{ value }|#{ TYPE_MAP[point.type] }"
+      out[key] = { path: point.path, value: "#{ value }|#{ TYPE_MAP[point.type] }"}
 
       if point.count isnt 1
-        out[key] += "|@#{ round(1 / point.count, 5) }"
+        out[key].value += "|@#{ round(1 / point.count, 5) }"
+
+      if point.tags and point.tags instanceof Array and point.tags.length
+        tagStr = point.tags.join(',')
+        out[key].value += "|##{ tagStr }"
 
     makeRequest out
 
@@ -253,50 +265,50 @@ exportDef = ->
       else
         path
 
-    send = (path, value, type='gauge') ->
+    send = (path, value, type='gauge', tags=[]) ->
       if not value? or not path?
         log.error "Can't log #{ path }:#{ value }"
         return
 
-      enqueue buildPath(path), value, type
+      enqueue buildPath(path), value, type, tags
 
     timer = {
       TIMES: {}
 
-      send: (path, duration) ->
-        send path, duration, 'timer'
+      send: (path, duration, tags=[]) ->
+        send path, duration, 'timer', tags
 
-      time: (path, action, ctx, args...) ->
+      time: (path, tags=[], action, ctx, args...) ->
         timer.start path
 
         done = =>
-          timer.stop path
+          timer.stop path, tags
 
         args.splice(0, 0, done)
         action.apply(ctx, args)
 
-      timeSync: (path, action, ctx, args...) ->
+      timeSync: (path, tags=[], action, ctx, args...) ->
         timer.start path
 
         ret = action.apply(ctx, args)
 
-        timer.stop path
+        timer.stop path, tags
 
         ret
 
-      wrap: (path, action) ->
+      wrap: (path, tags=[], action) ->
         if action?
           return (args...) ->
-            timer.timeSync path, action, @, args...
+            timer.timeSync path, tags, action, @, args...
         else
           return (action) ->
             return (args...) ->
-              timer.timeSync path, action, @, args...
+              timer.timeSync path, tags, action, @, args...
 
       start: (path) ->
         timer.TIMES[path] = now()
 
-      stop: (path) ->
+      stop: (path, tags) ->
         if not timer.TIMES[path]?
           log.error "Timer #{ path } ended without having been started"
           return
@@ -305,9 +317,9 @@ exportDef = ->
 
         timer.TIMES[path] = undefined
 
-        timer.send path, duration
+        timer.send path, duration, tags
 
-      stopwatch: (prefix, start) ->
+      stopwatch: (prefix, start, tags=[]) ->
         # A timer that can be stopped multiple times
 
         # If a start time is passed in, it's assumed
@@ -322,13 +334,13 @@ exportDef = ->
         last = start
 
         {
-          mark: (path, offset=0) ->
+          mark: (path, offset=0, tags) ->
             end = _now()
 
             if prefix
               path = prefix + '.' + path
 
-            timer.send path, (end - start + offset)
+            timer.send path, (end - start + offset), tags
 
           split: (path, offset=0) ->
             end = _now()
@@ -336,19 +348,19 @@ exportDef = ->
             if prefix
               path = prefix + '.' + path
 
-            timer.send path, (end - last + offset)
+            timer.send path, (end - last + offset), tags
 
             last = end
         }
 
-      mark: (path, time) ->
+      mark: (path, time, tags=[]) ->
         # A timer which always begins at page load
 
         time ?= +new Date
 
         start = timer.navigationStart()
 
-        timer.send path, (time - start)
+        timer.send path, (time - start), tags
 
       navigationStart: ->
         window?.performance?.timing?.navigationStart ? initTime
@@ -360,11 +372,11 @@ exportDef = ->
         now()
     }
 
-    count = (path, count=1) ->
-      send(path, count, 'counter')
+    count = (path, tags=[], count=1) ->
+      send(path, count, 'counter', tags)
 
     sentPerformanceData = false
-    sendPagePerformance = (path) ->
+    sendPagePerformance = (path, tags=[]) ->
       return false unless window?.performance?.timing?
       return false if sentPerformanceData
 
@@ -375,7 +387,7 @@ exportDef = ->
         # The data isn't fully ready until document load
         window.addEventListener? 'load', =>
           setTimeout =>
-            sendPagePerformance.call(@, path)
+            sendPagePerformance.call(@, path, tags)
           , 500
         , false
 
@@ -385,7 +397,10 @@ exportDef = ->
 
       start = window.performance.timing.navigationStart
       for key, time of window.performance.timing when typeof time is 'number'
-        timer.send "#{ path }.#{ key }", (time - start)
+        tagWithPerfProps = tags.slice(0)
+        tagWithPerfProps.push "perf-prop:#{ key }"
+        timer.send path, (time - start), tagWithPerfProps
+        tagWithPerfProps = []
 
       return true
 
@@ -413,7 +428,7 @@ exportDef = ->
               @enabled.splice i, 1
               return
 
-      sendReadyStateTimes: (path, times) ->
+      sendReadyStateTimes: (path, times, tags=[]) ->
         return unless times?
 
         codeMapping =
@@ -431,7 +446,7 @@ exportDef = ->
           last = time
 
         for status, val of diffs
-          timer.send "#{ path }.#{ status }", val
+          timer.send "#{ path }.#{ status }", val, tags
 
       urlToKey: (url, type, root) ->
         url = url.replace /https?:\/\//i, ''
@@ -484,7 +499,7 @@ exportDef = ->
         else
           url
 
-      monitor: (root) ->
+      monitor: (root, tags=[]) ->
         if not root or root is true
           root = requests.urlToKey(document.location.toString()) + '.requests'
 
@@ -498,9 +513,9 @@ exportDef = ->
           url = self.getFullUrl url
           stat = self.urlToKey url, type, root
 
-          send(stat, dur, 'timer')
+          send(stat, dur, 'timer', tags)
 
-          self.sendReadyStateTimes stat, readyStateTimes
+          self.sendReadyStateTimes stat, readyStateTimes, tags
 
           if request?.status?
             if request.status > 12000
