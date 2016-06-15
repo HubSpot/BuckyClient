@@ -39,7 +39,7 @@ describe 'urlToKey', ->
 
   it 'should add the method', ->
     expect(utk('x', 'GET')).toBe('x.get')
-    
+
   it 'should strip leading and trailing slashes', ->
     expect(utk('/a/b/c/')).toBe('a.b.c')
 
@@ -112,3 +112,31 @@ describe 'send', ->
     expect(server.requests.length).toBe(1)
 
     expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+
+  it 'should aggregate timers', ->
+    Bucky.send 'data.1', 5, 'timer'
+    Bucky.send 'data.1', 10, 'timer'
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+
+    expect(server.requests[0].requestBody).toBe("data.1:7.5|ms|@0.5\n")
+
+  it 'should send timers with tags', ->
+    Bucky.send 'data.1', 5, 'timer', ['tag:1', 'tag:2']
+    Bucky.timer.send 'data.2', 3, ['tag:3']
+    Bucky.send 'data.3', 9, 'timer', ['tag:4']
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+
+    expect(server.requests[0].requestBody).toBe("data.1:5|ms|#tag:1,tag:2\ndata.2:3|ms|#tag:3\ndata.3:9|ms|#tag:4\n")
+
+  it 'should send counts with tags', ->
+    Bucky.count 'ray', ['tag:3']
+    Bucky.count 'ray', ['tag:3']
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+
+    expect(server.requests[0].requestBody).toBe("ray:2|c|#tag:3\n")
