@@ -84,7 +84,8 @@
     TYPE_MAP = {
       'timer': 'ms',
       'gauge': 'g',
-      'counter': 'c'
+      'counter': 'c',
+      'string': 's'
     };
     ACTIVE = options.active;
     (updateActive = function() {

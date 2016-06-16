@@ -112,3 +112,10 @@ describe 'send', ->
     expect(server.requests.length).toBe(1)
 
     expect(server.requests[0].requestBody).toBe("data.1:5|ms\ndata.2:3|ms\n")
+
+  it 'should send a string', ->
+    Bucky.send 'data.point', 'hello', 'string'
+    Bucky.flush()
+
+    expect(server.requests.length).toBe(1)
+    expect(server.requests[0].requestBody).toBe("data.point:hello|s\n")

@@ -89,6 +89,7 @@ exportDef = ->
     'timer': 'ms'
     'gauge': 'g'
     'counter': 'c'
+    'string': 's'
 
   ACTIVE = options.active
   do updateActive = ->
