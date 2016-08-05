@@ -83,7 +83,7 @@ exportDef = ->
         else if tagOptions[key]?.toString().toLowerCase() is 'false'
           tagOptions[key] = null
    
-  options = extend {}, defaults, tagOptions
+  options = extend {}, tagOptions, defaults
     
   TYPE_MAP =
     'timer': 'ms'
